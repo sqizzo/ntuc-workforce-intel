@@ -1,0 +1,48 @@
+{
+  "dumps": [
+    {
+      "id": 1,
+      "filename": "company_20260130_093150.json",
+      "filepath": "dumps\\company_20260130_093150.json",
+      "timestamp": "2026-01-30T09:31:50.643162",
+      "dump_type": "company",
+      "metadata": {
+        "mode": "COMPANY",
+        "manual_dump": true,
+        "company_name": "Twelve Cupcakes"
+      },
+      "size_bytes": 234964,
+      "record_count": 14
+    },
+    {
+      "id": 2,
+      "filename": "company_20260130_094744.json",
+      "filepath": "dumps\\company_20260130_094744.json",
+      "timestamp": "2026-01-30T09:47:44.479409",
+      "dump_type": "company",
+      "metadata": {
+        "mode": "COMPANY",
+        "manual_dump": true,
+        "company_name": "Twelve Cupcakes"
+      },
+      "size_bytes": 233819,
+      "record_count": 12
+    },
+    {
+      "id": 3,
+      "filename": "company_20260130_151721.json",
+      "filepath": "dumps\\company_20260130_151721.json",
+      "timestamp": "2026-01-30T15:17:21.749600",
+      "dump_type": "company",
+      "metadata": {
+        "mode": "COMPANY",
+        "manual_dump": true,
+        "company_name": "Twelve Cupcakes"
+      },
+      "size_bytes": 272027,
+      "record_count": 22
+    }
+  ],
+  "total_dumps": 3,
+  "last_dump": "2026-01-30T15:17:21.749600"
+}

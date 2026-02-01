@@ -1,0 +1,66 @@
+{
+  "general_news_sources": [
+    {
+      "name": "Straits Times Singapore",
+      "url": "https://www.straitstimes.com/singapore",
+      "enabled": true
+    },
+    {
+      "name": "Channel NewsAsia Singapore",
+      "url": "https://www.channelnewsasia.com/singapore",
+      "enabled": true
+    },
+    {
+      "name": "Business Times Singapore",
+      "url": "https://www.businesstimes.com.sg/singapore",
+      "enabled": true
+    },
+    {
+      "name": "8Days",
+      "url": "https://www.8days.sg",
+      "enabled": true
+    }
+  ],
+  "company_search_sources": [
+    {
+      "name": "Straits Times Search",
+      "search_url": "https://www.straitstimes.com/search?searchkey={query}&sort=relevancydate",
+      "enabled": true
+    },
+    {
+      "name": "Channel NewsAsia Search",
+      "search_url": "https://www.channelnewsasia.com/search?q={query}",
+      "enabled": true
+    },
+    {
+      "name": "Business Times Search",
+      "search_url": "https://www.businesstimes.com.sg/search?query={query}",
+      "enabled": true
+    },
+    {
+      "name": "8Days Search",
+      "search_url": "https://www.8days.sg/search?q={query}&type=article",
+      "enabled": true
+    }
+  ],
+  "scraper_settings": {
+    "max_articles": 10,
+    "headless_mode": true,
+    "delay_between_requests": 2
+  },
+  "reddit_settings": {
+    "default_subreddits": ["askSingapore", "singapore"],
+    "max_threads": 5,
+    "max_comments_per_thread": 10
+  },
+  "json_dump_settings": {
+    "enabled": true,
+    "auto_dump": true,
+    "dump_directory": "dumps",
+    "dump_options": {
+      "include_metadata": true,
+      "include_timestamp": true,
+      "pretty_print": true
+    }
+  }
+}

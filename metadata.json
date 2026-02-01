@@ -1,0 +1,5 @@
+{
+  "name": "NTUC Workforce Intelligence Scraper",
+  "description": "An AI-powered agent designed to scrape and structure workforce-related signals (layoffs, AI adoption, manpower shortages) from public web sources to support risk analysis and hypothesis building.",
+  "requestFramePermissions": []
+}
