@@ -1,5 +1,3 @@
-<div align="center">
-
 # NTUC Workforce Intelligence Scraper
 
 A full-stack application for scraping and analyzing workforce intelligence signals using Python scrapers and a Next.js frontend.
@@ -158,13 +156,6 @@ Uses Selenium to:
 
 ## Development
 
-### Additional Documentation
-
-- **[Financial Features Guide](./FINANCIAL_FEATURES.md)** - Complete guide to financial analysis and AI insights
-- **[JSON Dump Documentation](./JSON_DUMP_DOCUMENTATION.md)** - Complete dump feature documentation
-- **[JSON Dump Quick Start](./JSON_DUMP_QUICKSTART.md)** - Quick reference for JSON dumps
-- **[Testing Guide](./TESTING_GUIDE.md)** - Step-by-step testing instructions
-
 ### JSON Dump Feature
 
 The application includes a comprehensive JSON dump system to save and manage scraped data:
@@ -197,8 +188,6 @@ curl -X PUT http://localhost:8000/api/config/dump-settings \
 - `GET /api/dumps/summary` - Get statistics
 - `GET /api/dumps/load/{filename}` - Load dump data
 - `DELETE /api/dumps/{filename}` - Delete a dump
-
-See [JSON_DUMP_QUICKSTART.md](./JSON_DUMP_QUICKSTART.md) for more details.
 
 ### Build for Production
 
