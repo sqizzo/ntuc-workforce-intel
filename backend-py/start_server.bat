@@ -1,0 +1,6 @@
+@echo off
+REM Start the Python backend server with venv
+echo Activating virtual environment...
+call venv\Scripts\activate.bat
+echo Starting FastAPI server...
+python main.py

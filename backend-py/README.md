@@ -10,10 +10,39 @@ FastAPI-based backend service for scraping workforce intelligence signals from m
 
 ## Installation
 
-1. Install Python dependencies:
+1. Create and activate a virtual environment:
+
+**On Windows (PowerShell):**
 
 ```bash
 cd backend-py
+python -m venv venv
+.\venv\Scripts\Activate.ps1
+```
+
+Or use the provided activation script:
+
+```bash
+.\activate.bat
+```
+
+**On Linux/Mac:**
+
+```bash
+cd backend-py
+python -m venv venv
+source venv/bin/activate
+```
+
+Or use the provided activation script:
+
+```bash
+./activate.sh
+```
+
+2. Install Python dependencies:
+
+```bash
 pip install -r requirements.txt
 ```
 
