@@ -14,6 +14,8 @@ from scrapers.financial_scraper import FinancialDataScraper
 from scrapers.news_scraper import NewsSearchScraper
 from scrapers.reddit_scraper import RedditScraper
 from json_dump_manager import JSONDumpManager
+from hypothesis_engine import HypothesisEngine
+from ai_service import AIService
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -39,6 +41,10 @@ dump_settings = CONFIG.get('json_dump_settings', {})
 dump_manager = JSONDumpManager(
     dump_dir=dump_settings.get('dump_directory', 'dumps')
 )
+
+# Initialize AI service and hypothesis engine
+ai_service = AIService()
+hypothesis_engine = HypothesisEngine(ai_service)
 
 # Create FastAPI app
 app = FastAPI(
@@ -709,6 +715,126 @@ async def load_dump(filename: str):
         raise
     except Exception as e:
         logger.error(f"Error loading dump: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+class HypothesisAnalysisRequest(BaseModel):
+    """Request model for hypothesis analysis"""
+    company_name: str = Field(..., description="Name of the company to analyze")
+    signals: Optional[List[Dict[str, Any]]] = Field(None, description="Signals data from scraping")
+    financial_data: Optional[Dict[str, Any]] = Field(None, description="Financial data from scraping")
+    dump_filename: Optional[str] = Field(None, description="Specific dump file to analyze (legacy)")
+
+
+@app.post("/api/hypothesis/analyze")
+async def analyze_hypothesis(request: HypothesisAnalysisRequest):
+    """
+    Generate risk hypothesis analysis for a company based on available data.
+    Data can be provided directly (signals, financial_data) or loaded from dump file.
+    """
+    try:
+        logger.info(f"Starting hypothesis analysis for: {request.company_name}")
+        
+        # Load data for analysis
+        news_signals = []
+        social_signals = []
+        financial_data = None
+        
+        # Priority 1: Use provided signals and financial data directly
+        if request.signals is not None:
+            logger.info(f"Using provided signals data ({len(request.signals)} signals)")
+            for signal in request.signals:
+                source_type = signal.get('source_type', '').lower()
+                if source_type in ['news', 'blog']:
+                    news_signals.append(signal)
+                elif source_type in ['social', 'forum']:
+                    social_signals.append(signal)
+            
+            if request.financial_data:
+                financial_data = request.financial_data
+                logger.info("Using provided financial data")
+        
+        # Priority 2: Load from specific dump file
+        elif request.dump_filename:
+            logger.info(f"Loading data from dump file: {request.dump_filename}")
+            dump_dir = dump_settings.get('dump_directory', 'dumps')
+            dump_path = os.path.join(os.path.dirname(__file__), dump_dir)
+            file_path = os.path.join(dump_path, request.dump_filename)
+            
+            if os.path.exists(file_path):
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    dump_data = json.load(f)
+                
+                # Extract signals from dump
+                signals = dump_data.get('signals', [])
+                for signal in signals:
+                    source_type = signal.get('source_type', '').lower()
+                    if source_type in ['news', 'blog']:
+                        news_signals.append(signal)
+                    elif source_type in ['social', 'forum']:
+                        social_signals.append(signal)
+                
+                # Extract financial data if available
+                financial_data = dump_data.get('financial_data')
+        
+        # Priority 3: Search dump files by company name (legacy fallback)
+        else:
+            logger.info(f"Searching dump files for company: {request.company_name}")
+            dump_dir = dump_settings.get('dump_directory', 'dumps')
+            dump_path = os.path.join(os.path.dirname(__file__), dump_dir)
+            
+            if os.path.exists(dump_path):
+                for filename in os.listdir(dump_path):
+                    if filename.endswith('.json') and filename != '_dump_checklist.json':
+                        file_path = os.path.join(dump_path, filename)
+                        try:
+                            with open(file_path, 'r', encoding='utf-8') as f:
+                                dump_data = json.load(f)
+                            
+                            # Check if this dump is for the requested company
+                            dump_company = dump_data.get('company_name', '').lower()
+                            search_company = request.company_name.lower()
+                            
+                            # Match if company name is in the dump's company_name field
+                            if search_company in dump_company or dump_company in search_company:
+                                # Extract signals
+                                signals = dump_data.get('signals', [])
+                                for signal in signals:
+                                    source_type = signal.get('source_type', '').lower()
+                                    if source_type in ['news', 'blog']:
+                                        news_signals.append(signal)
+                                    elif source_type in ['social', 'forum']:
+                                        social_signals.append(signal)
+                                
+                                # Get financial data
+                                if not financial_data and dump_data.get('financial_data'):
+                                    financial_data = dump_data.get('financial_data')
+                                break  # Use the first matching dump
+                        except Exception as e:
+                            logger.warning(f"Error reading dump {filename}: {e}")
+                            continue
+        
+        if not news_signals and not social_signals:
+            raise HTTPException(
+                status_code=404,
+                detail=f"No data found for company: {request.company_name}"
+            )
+        
+        # Perform hypothesis analysis
+        analysis_result = hypothesis_engine.analyze_company_risk(
+            company_name=request.company_name,
+            news_signals=news_signals,
+            social_signals=social_signals,
+            financial_data=financial_data
+        )
+        
+        logger.info(f"Hypothesis analysis completed for {request.company_name}")
+        return analysis_result
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error in hypothesis analysis: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

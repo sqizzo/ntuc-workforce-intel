@@ -15,6 +15,7 @@ A full-stack application for scraping and analyzing workforce intelligence signa
 - **Financial Mode**: Analyze company financial data for workforce signals
 - **Financial Charts**: Interactive stock price visualization with 1-year historical data
 - **AI Financial Analyst**: AI-powered insights on company health and workforce implications
+- **Risk Hypothesis Engine**: AI-powered risk analysis system that aggregates news, social forums, and financial data into structured risk signals
 - **JSON Dump Manager**: Save, track, and manage scraped data with automatic or manual dumps
 - Real-time data visualization with Recharts
 - Modern UI with Tailwind CSS
@@ -86,6 +87,7 @@ npm run dev
 ### Access the Application
 
 - **Frontend**: [http://localhost:3000](http://localhost:3000)
+- **Risk Hypothesis Engine**: [http://localhost:3000/hypothesis](http://localhost:3000/hypothesis)
 - **Backend API**: [http://localhost:8000](http://localhost:8000)
 - **API Documentation**: [http://localhost:8000/docs](http://localhost:8000/docs)
 
@@ -94,6 +96,7 @@ npm run dev
 ```
 ├── app/                    # Next.js app directory
 │   ├── api/               # API routes
+│   ├── hypothesis/        # Risk Hypothesis page
 │   ├── globals.css        # Global styles
 │   ├── layout.tsx         # Root layout
 │   └── page.tsx           # Main page
@@ -102,9 +105,13 @@ npm run dev
 │   │   ├── financial_scraper.py
 │   │   ├── news_scraper.py
 │   │   └── reddit_scraper.py
+│   ├── hypothesis_engine.py  # Risk analysis engine
+│   ├── ai_service.py      # AI integration
 │   ├── main.py           # FastAPI server
 │   └── requirements.txt   # Python dependencies
 ├── components/            # React components
+│   ├── HypothesisViewer.tsx  # Risk analysis UI
+│   └── ...
 ├── types.ts              # TypeScript types
 └── README.md
 ```
@@ -118,6 +125,8 @@ npm run dev
 - **POST** `/api/scrape/financial?ticker=AAPL` - Financial data only
 - **POST** `/api/scrape/news` - News articles only
 - **POST** `/api/scrape/reddit` - Reddit discussions only
+- **POST** `/api/hypothesis/analyze` - Generate risk hypothesis analysis
+  - Body: `{"company_name": "CompanyName", "dump_filename": "optional.json"}`
 
 ### Next.js API (Port 3000)
 
@@ -155,6 +164,42 @@ Uses Selenium to:
 - Analyze workforce discussions
 
 ## Development
+
+### Risk Hypothesis Engine
+
+The Risk Hypothesis Engine analyzes company risk using AI to aggregate and categorize data from multiple sources:
+
+**How It Works:**
+
+1. **Data Summarization**: Extracts key insights from news articles and social discussions
+2. **Supporting Signals**: Creates titled evidence with timeframes (e.g., "Scale Decay & Branch Closures")
+3. **Primary Signals**: Groups similar signals into risk categories (e.g., "OPERATIONAL DEGRADATION")
+4. **Risk Assessment**: Generates overall risk level with recommendations
+
+**Features:**
+
+- ✅ AI-powered insight extraction
+- ✅ Multi-source aggregation (News, Social, Financial)
+- ✅ Interactive visualization with pie charts
+- ✅ Clickable primary signals to view supporting evidence
+- ✅ Severity classification (Low/Medium/High)
+- ✅ Source distribution analysis
+
+**Example Primary Signals:**
+
+- `OPERATIONAL DEGRADATION`: Store closures, declining operations
+- `FINANCIAL DISTRESS`: Poor performance, debt concerns
+- `MARKET PERCEPTION`: Reputation decline, customer sentiment
+- `WORKFORCE ISSUES`: Layoffs, employee concerns
+
+**Usage:**
+
+1. Navigate to `/hypothesis` in the web interface
+2. Enter a company name
+3. Click "Analyze Risk"
+4. Review primary signals and click to see supporting evidence
+
+For more details, see [backend-py/documents/HYPOTHESIS_ENGINE.md](backend-py/documents/HYPOTHESIS_ENGINE.md)
 
 ### JSON Dump Feature
 
