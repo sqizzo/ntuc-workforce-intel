@@ -13,6 +13,7 @@ import os
 from scrapers.financial_scraper import FinancialDataScraper
 from scrapers.news_scraper import NewsSearchScraper
 from scrapers.reddit_scraper import RedditScraper
+from scrapers.google_news_rss_scraper import GoogleNewsRSSScraper
 from json_dump_manager import JSONDumpManager
 from hypothesis_engine import HypothesisEngine
 from ai_service import AIService, WorkforceRelevanceFilter
@@ -71,6 +72,7 @@ class ScraperMode(str, Enum):
     FINANCIAL = "FINANCIAL"
     NEWS = "NEWS"
     REDDIT = "REDDIT"
+    GOOGLE_NEWS = "GOOGLE_NEWS"
 
 
 class ScrapeRequest(BaseModel):
@@ -182,6 +184,22 @@ async def scrape_workforce_signals(request: ScrapeRequest):
                 except Exception as e:
                     logger.warning(f"Failed to scrape r/{subreddit}: {e}")
             
+        elif request.mode == ScraperMode.GOOGLE_NEWS:
+            # Google News scraping - fetch headlines, dates, and source links via RSS
+            if not request.keywords and not request.companyName:
+                raise HTTPException(status_code=400, detail="Keywords or company name required for Google News mode")
+            
+            query = request.companyName if request.companyName else ' '.join(request.keywords)
+            # Get max_articles from request, config, or None (fetch all)
+            max_articles = request.max_articles if request.max_articles is not None else CONFIG.get('google_news_settings', {}).get('max_articles')
+            
+            google_news_scraper = GoogleNewsRSSScraper(max_articles=max_articles)
+            signals = google_news_scraper.search_workforce_signals(
+                query=query,
+                before_date=request.before_date
+            )
+            logger.info(f"Found {len(signals)} signals from Google News for '{query}'")
+            
         elif request.mode == ScraperMode.COMPANY:
             # Company-specific scraping (combines all sources)
             if not request.companyName:
@@ -223,6 +241,22 @@ async def scrape_workforce_signals(request: ScrapeRequest):
                         logger.warning(f"Failed to scrape r/{subreddit}: {sub_e}")
             except Exception as e:
                 logger.warning(f"Reddit scraping failed: {e}")
+            
+            # Add Google News scraping for more historical coverage via RSS
+            # Use oldest_only=30 to get historical data for hypothesis engine
+            try:
+                # Get max_articles from config (None = fetch all)
+                max_gnews = CONFIG.get('google_news_settings', {}).get('max_articles')
+                google_news_scraper = GoogleNewsRSSScraper(max_articles=max_gnews)
+                gnews_signals = google_news_scraper.search_workforce_signals(
+                    query=request.companyName,
+                    before_date=request.before_date,
+                    oldest_only=30  # Only use 30 oldest articles for hypothesis engine
+                )
+                signals.extend(gnews_signals)
+                logger.info(f"Found {len(gnews_signals)} oldest signals from Google News for {request.companyName}")
+            except Exception as e:
+                logger.warning(f"Google News scraping failed: {e}")
             
             # Extract actual workforce data from signals if we have them
             if financial_result and signals:
@@ -813,9 +847,10 @@ async def analyze_hypothesis(request: HypothesisAnalysisRequest):
             logger.info(f"Using provided signals data ({len(request.signals)} signals)")
             for signal in request.signals:
                 source_type = signal.get('source_type', '').lower()
-                if source_type in ['news', 'blog']:
+                # Include news, blog, and google_news as news signals
+                if source_type in ['news', 'blog', 'google_news']:
                     news_signals.append(signal)
-                elif source_type in ['social', 'forum']:
+                elif source_type in ['social', 'forum', 'reddit']:
                     social_signals.append(signal)
             
             if request.financial_data:
@@ -837,9 +872,10 @@ async def analyze_hypothesis(request: HypothesisAnalysisRequest):
                 signals = dump_data.get('signals', [])
                 for signal in signals:
                     source_type = signal.get('source_type', '').lower()
-                    if source_type in ['news', 'blog']:
+                    # Include news, blog, and google_news as news signals
+                    if source_type in ['news', 'blog', 'google_news']:
                         news_signals.append(signal)
-                    elif source_type in ['social', 'forum']:
+                    elif source_type in ['social', 'forum', 'reddit']:
                         social_signals.append(signal)
                 
                 # Extract financial data if available
@@ -869,9 +905,10 @@ async def analyze_hypothesis(request: HypothesisAnalysisRequest):
                                 signals = dump_data.get('signals', [])
                                 for signal in signals:
                                     source_type = signal.get('source_type', '').lower()
-                                    if source_type in ['news', 'blog']:
+                                    # Include news, blog, and google_news as news signals
+                                    if source_type in ['news', 'blog', 'google_news']:
                                         news_signals.append(signal)
-                                    elif source_type in ['social', 'forum']:
+                                    elif source_type in ['social', 'forum', 'reddit']:
                                         social_signals.append(signal)
                                 
                                 # Get financial data

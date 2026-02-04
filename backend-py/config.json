@@ -53,6 +53,13 @@
     "max_threads": 5,
     "max_comments_per_thread": 10
   },
+  "google_news_settings": {
+    "max_articles": null,
+    "default_region": "SG",
+    "default_language": "en-SG",
+    "enabled": true,
+    "note": "max_articles: null means fetch ALL articles from RSS feed (typically 100+)"
+  },
   "json_dump_settings": {
     "enabled": true,
     "auto_dump": false

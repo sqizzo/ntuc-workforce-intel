@@ -43,26 +43,244 @@ class HypothesisEngine:
             Complete risk analysis with primary and supporting signals
         """
         logger.info(f"Starting risk analysis for {company_name}")
+        logger.info(f"Input signals - News: {len(news_signals)}, Social: {len(social_signals)}")
+        total_input_signals = len(news_signals) + len(social_signals)
         
-        # Step 1: Summarize and extract insights from each data source
-        news_insights = self._summarize_data_source(company_name, news_signals, "news")
-        social_insights = self._summarize_data_source(company_name, social_signals, "social")
-        financial_insights = self._extract_financial_insights(company_name, financial_data)
-        
-        # Step 2: Create supporting signals (evidence with titles)
-        supporting_signals = self._create_supporting_signals(
-            company_name, news_insights, social_insights, financial_insights
+        # Step 1: Convert each input signal directly to supporting signal format (1-to-1 mapping)
+        # This preserves all original data including URLs
+        supporting_signals = self._create_supporting_signals_from_raw_signals(
+            news_signals, social_signals
         )
+        
+        # CRITICAL VALIDATION: Ensure 1-to-1 mapping
+        if len(supporting_signals) != total_input_signals:
+            logger.error(f"MAPPING ERROR: Expected {total_input_signals} supporting signals, got {len(supporting_signals)}")
+            raise ValueError(f"Supporting signal count mismatch: {len(supporting_signals)} != {total_input_signals}")
+        
+        logger.info(f"✓ Created {len(supporting_signals)} supporting signals from {total_input_signals} input signals (1-to-1 mapping confirmed)")
+        
+        # Validate all supporting signals have evidence_url
+        signals_without_url = [s['id'] for s in supporting_signals if not s.get('evidence_url')]
+        if signals_without_url:
+            logger.warning(f"⚠ {len(signals_without_url)} supporting signals missing evidence_url: {signals_without_url[:5]}")
+        
+        # Add financial insights as additional supporting signals
+        financial_insights = self._extract_financial_insights(company_name, financial_data)
+        for idx, insight in enumerate(financial_insights):
+            supporting_signals.append({
+                "id": f"ss_financial_{idx + 1}",
+                "title": insight.get('key_concern', 'Financial Concern'),
+                "source_type": "financial",
+                "timeframe": insight.get('timeframe', 'Unknown'),
+                "evidence": insight.get('summary', 'No details available'),
+                "evidence_url": None,
+                "severity": insight.get('severity', 'medium')
+            })
+        
+        total_supporting_signals = len(supporting_signals)
+        logger.info(f"Total supporting signals (including {len(financial_insights)} financial): {total_supporting_signals}")
+        
+        # Dump supporting signals for debugging
+        import os
+        debug_dir = os.path.join(os.path.dirname(__file__), 'dumps', 'debug')
+        os.makedirs(debug_dir, exist_ok=True)
+        with open(os.path.join(debug_dir, 'supporting_signals.json'), 'w', encoding='utf-8') as f:
+            json.dump(supporting_signals, f, indent=2, ensure_ascii=False)
+        logger.info(f"Dumped {len(supporting_signals)} supporting signals to dumps/debug/supporting_signals.json")
         
         # Step 3: Group supporting signals into primary signals
         primary_signals = self._group_into_primary_signals(
             company_name, supporting_signals
         )
         
+        # Dump primary signals for debugging
+        with open(os.path.join(debug_dir, 'primary_signals.json'), 'w', encoding='utf-8') as f:
+            json.dump(primary_signals, f, indent=2, ensure_ascii=False)
+        logger.info(f"Dumped {len(primary_signals)} primary signals to dumps/debug/primary_signals.json")
+        
+        # Create assignment analysis
+        all_assigned_ids = set()
+        for ps in primary_signals:
+            all_assigned_ids.update(ps.get('supporting_signal_ids', []))
+        
+        all_supporting_ids = {s['id'] for s in supporting_signals}
+        unassigned_ids = all_supporting_ids - all_assigned_ids
+        
+        assignment_report = {
+            "total_supporting_signals": len(supporting_signals),
+            "total_assigned": len(all_assigned_ids),
+            "total_unassigned": len(unassigned_ids),
+            "unassigned_signal_ids": list(unassigned_ids),
+            "unassigned_details": [s for s in supporting_signals if s['id'] in unassigned_ids],
+            "primary_signal_assignments": [
+                {
+                    "primary_id": ps['id'],
+                    "title": ps['title'],
+                    "assigned_count": len(ps.get('supporting_signal_ids', [])),
+                    "assigned_ids": ps.get('supporting_signal_ids', [])
+                }
+                for ps in primary_signals
+            ]
+        }
+        
+        with open(os.path.join(debug_dir, 'assignment_analysis.json'), 'w', encoding='utf-8') as f:
+            json.dump(assignment_report, f, indent=2, ensure_ascii=False)
+        
+        # CRITICAL VALIDATION: All signals must be assigned
+        if len(unassigned_ids) > 0:
+            logger.error(f"❌ ASSIGNMENT ERROR: {len(unassigned_ids)}/{len(supporting_signals)} signals unassigned!")
+            logger.error(f"Unassigned signal IDs: {sorted(unassigned_ids)}")
+            # Force assign unassigned signals to a catch-all primary signal
+            if unassigned_ids:
+                logger.warning("Force-assigning unassigned signals to primary signals...")
+                # Find or create a catch-all primary signal
+                catchall_ps = next((ps for ps in primary_signals if 'other' in ps.get('title', '').lower()), None)
+                if not catchall_ps:
+                    # Add unassigned to the smallest primary signal
+                    smallest_ps = min(primary_signals, key=lambda ps: len(ps.get('supporting_signal_ids', [])))
+                    smallest_ps['supporting_signal_ids'].extend(sorted(unassigned_ids))
+                    logger.warning(f"Added {len(unassigned_ids)} unassigned signals to '{smallest_ps['title']}'")
+                else:
+                    catchall_ps['supporting_signal_ids'].extend(sorted(unassigned_ids))
+                    logger.warning(f"Added {len(unassigned_ids)} unassigned signals to catch-all category")
+                
+                # Recalculate distributions
+                for ps in primary_signals:
+                    ps['source_distribution'] = self._calculate_source_distribution(
+                        ps.get('supporting_signal_ids', []),
+                        supporting_signals
+                    )
+        else:
+            logger.info(f"✓ All {len(supporting_signals)} supporting signals successfully assigned to primary signals")
+        
+        # Validate source count totals
+        total_news_in_primaries = sum(ps['source_distribution']['News'] for ps in primary_signals)
+        total_social_in_primaries = sum(ps['source_distribution']['Social'] for ps in primary_signals)
+        logger.info(f"Source distribution validation: News={total_news_in_primaries}/{len(news_signals)}, Social={total_social_in_primaries}/{len(social_signals)}")
+        
+        if total_news_in_primaries != len(news_signals) or total_social_in_primaries != len(social_signals):
+            logger.error(f"❌ SOURCE COUNT MISMATCH! Expected News={len(news_signals)}, Social={len(social_signals)}")
+            logger.error(f"Got News={total_news_in_primaries}, Social={total_social_in_primaries}")
+        
         # Step 4: AI-powered risk scoring for all signals
         supporting_signals_with_scores = self._add_ai_risk_scores_to_supporting_signals(
             company_name, supporting_signals
         )
+        
+        primary_signals_with_scores = self._add_ai_risk_scores_to_primary_signals(
+            company_name, primary_signals, supporting_signals_with_scores
+        )
+        
+        # Step 5: Calculate overall risk score using AI
+        overall_risk_score = self._calculate_overall_risk_score(
+            company_name, primary_signals_with_scores, supporting_signals_with_scores, financial_data
+        )
+        
+        # Step 6: Generate major hypothesis synthesizing all signals
+        major_hypothesis = self._generate_major_hypothesis(
+            company_name, primary_signals_with_scores, supporting_signals_with_scores, overall_risk_score
+        )
+        
+        # Step 7: Generate overall risk assessment
+        risk_summary = self._generate_risk_summary(
+            company_name, primary_signals_with_scores, financial_data
+        )
+        
+        return {
+            "company_name": company_name,
+            "analysis_timestamp": datetime.utcnow().isoformat(),
+            "overall_risk_score": overall_risk_score,
+            "major_hypothesis": major_hypothesis,
+            "risk_summary": risk_summary,
+            "primary_signals": primary_signals_with_scores,
+            "supporting_signals": supporting_signals_with_scores,
+            "data_sources": {
+                "news_count": len(news_signals),
+                "social_count": len(social_signals),
+                "has_financial_data": financial_data is not None
+            }
+        }
+    
+    def _create_supporting_signals_from_raw_signals(
+        self,
+        news_signals: List[Dict[str, Any]],
+        social_signals: List[Dict[str, Any]]
+    ) -> List[Dict[str, Any]]:
+        """
+        Convert raw input signals directly to supporting signals (1-to-1 mapping)
+        Preserves all original signal data including URLs
+        
+        Args:
+            news_signals: List of news signal data
+            social_signals: List of social signal data
+            
+        Returns:
+            List of supporting signals with preserved URLs and metadata
+        """
+        supporting_signals = []
+        signal_counter = 1
+        
+        # Process news signals
+        for signal in news_signals:
+            title = signal.get('metadata', {}).get('title', '') or signal.get('headline', '') or signal.get('extracted_text', '')[:60] + "..."
+            source_type = signal.get('source_type', 'news')
+            date = signal.get('metadata', {}).get('publish_date', '') or signal.get('published_date', '') or signal.get('metadata', {}).get('date', 'Unknown')
+            evidence = signal.get('extracted_text', 'No content available')
+            evidence_url = signal.get('source_url', '') or signal.get('url', '')
+            
+            # Determine timeframe from date
+            timeframe = 'Unknown'
+            if date and date != 'Unknown':
+                try:
+                    from datetime import datetime as dt
+                    if 'T' in str(date) or '-' in str(date):
+                        year = str(date)[:4]
+                        timeframe = year
+                    else:
+                        timeframe = str(date)
+                except:
+                    timeframe = str(date)[:4] if len(str(date)) >= 4 else 'Unknown'
+            
+            supporting_signals.append({
+                "id": f"ss_{signal_counter}",
+                "title": title[:100],  # Limit title length
+                "source_type": source_type,
+                "timeframe": timeframe,
+                "evidence": evidence[:500],  # Limit evidence length
+                "evidence_url": evidence_url,
+                "severity": "medium"  # Default severity, will be scored later
+            })
+            signal_counter += 1
+        
+        # Process social signals
+        for signal in social_signals:
+            title = signal.get('post_title', '') or signal.get('extracted_text', '')[:60] + "..."
+            source_type = signal.get('source_type', 'social')
+            date = signal.get('created_date', '') or signal.get('metadata', {}).get('date', 'Unknown')
+            evidence = signal.get('extracted_text', '') or signal.get('post_text', 'No content available')
+            evidence_url = signal.get('source_url', '') or signal.get('url', '')
+            
+            # Determine timeframe from date
+            timeframe = 'Unknown'
+            if date and date != 'Unknown':
+                try:
+                    year = str(date)[:4]
+                    timeframe = year
+                except:
+                    timeframe = 'Unknown'
+            
+            supporting_signals.append({
+                "id": f"ss_{signal_counter}",
+                "title": title[:100],
+                "source_type": source_type,
+                "timeframe": timeframe,
+                "evidence": evidence[:500],
+                "evidence_url": evidence_url,
+                "severity": "medium"
+            })
+            signal_counter += 1
+        
+        return supporting_signals
         
         primary_signals_with_scores = self._add_ai_risk_scores_to_primary_signals(
             company_name, primary_signals, supporting_signals_with_scores
@@ -120,16 +338,21 @@ class HypothesisEngine:
         
         # Prepare data for AI analysis
         signal_texts = []
-        for idx, signal in enumerate(signals[:20]):  # Limit to 20 most relevant
+        # Process ALL signals - no arbitrary limit
+        # If there are too many, we'll batch them
+        total_signals = len(signals)
+        logger.info(f"Processing {total_signals} {source_type} signals...")
+        
+        for idx, signal in enumerate(signals):
             text = signal.get('extracted_text', '')
-            title = signal.get('metadata', {}).get('title', '')
-            date = signal.get('metadata', {}).get('publish_date', 'Unknown date')
+            title = signal.get('metadata', {}).get('title', '') or signal.get('headline', '')
+            date = signal.get('metadata', {}).get('publish_date', '') or signal.get('published_date', 'Unknown date')
             source_name = signal.get('source_name', 'Unknown source')
             
             signal_texts.append({
                 "id": idx,
                 "title": title,
-                "text": text[:500],  # Limit text length
+                "text": text[:300],  # Reduce per-signal text to fit more signals
                 "date": date,
                 "source": source_name
             })
@@ -137,7 +360,8 @@ class HypothesisEngine:
         prompt = self._get_summarization_prompt(company_name, signal_texts, source_type)
         
         try:
-            response = self.ai_service.query(prompt, temperature=0.3, max_tokens=2000)
+            # Significantly increase max_tokens to handle more signals
+            response = self.ai_service.query(prompt, temperature=0.3, max_tokens=6000)
             insights = json.loads(response)
             return insights.get('insights', [])
         except Exception as e:
@@ -155,15 +379,28 @@ class HypothesisEngine:
         
         return f"""You are analyzing {source_type} data about "{company_name}" to extract key insights for risk analysis.
 
-DATA TO ANALYZE:
+DATA TO ANALYZE ({len(signal_texts)} signals):
 {signals_json}
 
-TASK:
-Analyze the above {source_type} data and extract key insights. For each distinct insight:
+CRITICAL TASK - READ CAREFULLY:
+You have {len(signal_texts)} distinct signals. Your goal is to extract AT LEAST {max(15, int(len(signal_texts) * 0.65))} SEPARATE insights.
+
+RULES:
+1. DEFAULT: Each signal should become its own insight UNLESS multiple signals discuss the EXACT SAME event
+2. "Same event" means: same date, same incident, same people involved
+3. Different timeframes = SEPARATE insights (e.g., 2011 incident vs 2020 incident)
+4. Different aspects = SEPARATE insights (e.g., closure vs lawsuit vs employee issue)
+5. Different locations/people = SEPARATE insights
+6. If uncertain whether to combine, DON'T - keep them separate
+
+TARGET: Create {max(15, int(len(signal_texts) * 0.65))} or MORE insights from these {len(signal_texts)} signals.
+
+For each distinct insight:
 1. Provide a brief summary (1-2 sentences)
 2. Identify the key concern or theme
 3. Note the timeframe/date if available
-4. List which signal IDs support this insight
+4. List which signal IDs support this insight (usually 1-2 IDs unless truly identical)
+5. Assess severity (high if critical workforce/operational issues, medium for concerning trends, low for minor issues)
 
 Return a JSON object with this structure:
 {{
@@ -179,12 +416,14 @@ Return a JSON object with this structure:
 }}
 
 Focus on insights related to:
-- Business operations and closures
-- Financial performance concerns
-- Employee/workforce issues
-- Market perception and reputation
+- Business operations and closures (each closure/issue = separate insight)
+- Financial performance concerns (group by timeframe)
+- Employee/workforce issues (layoffs, underpayment, treatment, retention - separate by incident)
+- Market perception and reputation (separate by theme)
 - Industry trends
-- Regulatory or legal issues
+- Regulatory or legal issues (each case = separate insight)
+
+IMPORTANT: Maximize the number of distinct insights. Better to have 15+ specific insights than 5 overly-broad ones.
 
 Respond with ONLY valid JSON, no markdown formatting."""
     
@@ -331,8 +570,10 @@ Respond with ONLY valid JSON, no markdown formatting."""
         prompt = self._get_supporting_signals_prompt(company_name, all_insights)
         
         try:
-            response = self.ai_service.query(prompt, temperature=0.3, max_tokens=2500)
+            # Increase token limit to preserve more supporting signals
+            response = self.ai_service.query(prompt, temperature=0.3, max_tokens=4500)
             result = json.loads(response)
+            logger.info(f"Created {len(result.get('supporting_signals', []))} supporting signals from {len(all_insights)} insights")
             return result.get('supporting_signals', [])
         except Exception as e:
             logger.error(f"Error creating supporting signals: {e}")
@@ -349,31 +590,50 @@ Respond with ONLY valid JSON, no markdown formatting."""
         
         return f"""You are analyzing risk signals for "{company_name}". Create structured "supporting signals" from the following insights.
 
-INSIGHTS:
+INSIGHTS ({len(insights)} total):
 {insights_json}
+
+CRITICAL INSTRUCTION:
+Each insight should become its OWN supporting signal. DO NOT combine or merge insights.
+- If you receive 24 insights, create approximately 20-24 supporting signals
+- Only combine insights if they describe the EXACT SAME incident with the same date
+- Different timeframes, different aspects, or different concerns = separate supporting signals
 
 TASK:
 Transform these insights into supporting signals. Each supporting signal should have:
 1. A clear, descriptive title (3-7 words) that summarizes the signal
-2. The source type (News or Social)
+2. The source type EXACTLY as provided in the insight (news, social, or financial)
 3. The timeframe (year or date range)
 4. Evidence data (the detailed insight/summary)
+5. Severity level (high, medium, or low)
+
+IMPORTANT: 
+- Create a 1-to-1 mapping: one insight = one supporting signal (unless identical)
+- Preserve the source_type from each insight exactly
+- DO NOT over-consolidate - we want comprehensive analysis with many signals
 
 Return a JSON object with this structure:
 {{
     "supporting_signals": [
         {{
             "id": "ss_1",
-            "title": "Scale Decay & Branch Closures",
-            "source_type": "Social",
-            "timeframe": "2019",
-            "evidence": "Reddit discourse highlights store shutdowns and doubts about long-term business sustainability.",
+            "title": "Founders Charged Underpaying Workers",
+            "source_type": "news",
+            "timeframe": "2020",
+            "evidence": "Founders Daniel Ong and Jaime Teo charged with underpaying 7 foreign workers over 2 years.",
             "severity": "high"
         }},
         {{
             "id": "ss_2",
+            "title": "Store Closures in 2019",
+            "source_type": "news",
+            "timeframe": "2019",
+            "evidence": "News reports highlight store shutdowns and operational challenges.",
+            "severity": "high"
+        }},
+            "id": "ss_2",
             "title": "Terminal Industry Outlook",
-            "source_type": "Social",
+            "source_type": "social",
             "timeframe": "2024",
             "evidence": "Community consensus on r/askSingapore naming the brand as most likely to fail within 5 years.",
             "severity": "high"
@@ -422,9 +682,12 @@ Respond with ONLY valid JSON, no markdown formatting."""
         prompt = self._get_primary_signals_prompt(company_name, supporting_signals)
         
         try:
-            response = self.ai_service.query(prompt, temperature=0.3, max_tokens=2000)
+            # Increase token limit significantly to handle ~52 signal assignments across ~8 primary signals
+            response = self.ai_service.query(prompt, temperature=0.3, max_tokens=4500)
             result = json.loads(response)
             primary_signals = result.get('primary_signals', [])
+            
+            logger.info(f"Created {len(primary_signals)} primary signals from {len(supporting_signals)} supporting signals")
             
             # Calculate source distribution for each primary signal
             for ps in primary_signals:
@@ -447,20 +710,31 @@ Respond with ONLY valid JSON, no markdown formatting."""
         """Generate prompt for grouping into primary signals"""
         signals_json = json.dumps(supporting_signals, indent=2)
         
-        return f"""You are analyzing risk signals for "{company_name}". Group the following supporting signals into broader primary signal categories.
+        return f"""You are analyzing risk signals for "{company_name}". Group the following {len(supporting_signals)} supporting signals into broader primary signal categories.
 
-SUPPORTING SIGNALS:
+SUPPORTING SIGNALS TO GROUP ({len(supporting_signals)} total):
 {signals_json}
 
+⚠️ MANDATORY REQUIREMENT - THIS IS CRITICAL:
+YOU MUST ASSIGN EVERY SINGLE ONE OF THE {len(supporting_signals)} SUPPORTING SIGNALS.
+- Count them: there are {len(supporting_signals)} signals with IDs from ss_1 to ss_{len(supporting_signals)}
+- Your response MUST include all {len(supporting_signals)} signal IDs across all primary signals
+- If a signal doesn't fit perfectly, put it in the closest category - DO NOT leave it out
+- You can assign 6-10 signals per primary signal if needed
+
+VERIFICATION CHECKLIST (complete before responding):
+□ Did I include ss_1 through ss_{len(supporting_signals)} in my response?
+□ Did I count the total IDs to ensure it equals {len(supporting_signals)}?
+□ Are any signals left unassigned?
+
 TASK:
-Group these supporting signals into primary signal categories based on similar themes. Common categories include:
+Group these supporting signals into primary signal categories. Common categories include:
 - OPERATIONAL DEGRADATION (closures, declining business)
-- FINANCIAL DISTRESS (losses, debt, poor performance)
+- FINANCIAL DISTRESS (losses, debt, poor performance)  
+- WORKFORCE ISSUES (layoffs, employee concerns, labor violations, underpayment)
+- REGULATORY/LEGAL RISKS (legal cases, fines, compliance issues)
 - MARKET PERCEPTION (reputation, customer concerns)
-- WORKFORCE ISSUES (layoffs, employee concerns)
-- PRODUCT & CUSTOMER VALUE EROSION
-- STRATEGIC ANOMALIES
-- REGULATORY/LEGAL RISKS
+- STRATEGIC ANOMALIES (management decisions, strategic issues)
 - INDUSTRY CHALLENGES
 
 Return a JSON object with this structure:
@@ -468,7 +742,12 @@ Return a JSON object with this structure:
     "primary_signals": [
         {{
             "id": "ps_1",
-            "title": "OPERATIONAL DEGRADATION",
+            "title": "WORKFORCE ISSUES",
+            "description": "Concerns related to employee treatment, layoffs, and labor violations",
+            "risk_level": "high",
+            "supporting_signal_ids": ["ss_1", "ss_2", "ss_7", "ss_9", "ss_11", "ss_18"],
+            "key_indicators": ["Underpayment", "Labor violations", "Union activity"]
+        }},
             "description": "Evidence of declining operations and business closures",
             "risk_level": "high",
             "supporting_signal_ids": ["ss_1", "ss_2"],
@@ -490,10 +769,20 @@ Respond with ONLY valid JSON, no markdown formatting."""
         
         for signal in supporting_signals:
             if signal['id'] in supporting_signal_ids:
-                source_type = signal.get('source_type', 'Unknown').capitalize()
-                if source_type in distribution:
-                    distribution[source_type] += 1
+                source_type = signal.get('source_type', 'unknown').lower()
+                # Map source types to distribution categories
+                if source_type in ['news', 'google_news', 'blog']:
+                    distribution['News'] += 1
+                elif source_type in ['social', 'reddit', 'forum']:
+                    distribution['Social'] += 1
+                elif source_type == 'financial':
+                    distribution['Financial'] += 1
+                else:
+                    logger.warning(f"Unknown source_type in supporting signal: '{source_type}' (signal id: {signal['id']})")
         
+        # Log distribution for debugging
+        total = sum(distribution.values())
+        logger.info(f"Source distribution for {len(supporting_signal_ids)} signals: News={distribution['News']}, Social={distribution['Social']}, Financial={distribution['Financial']} (total={total})")
         return distribution
     
     def _create_fallback_primary_signals(
