@@ -55,14 +55,42 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Configure CORS
+# Configure CORS - support both local and production frontend
+frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
+allowed_origins = [
+    "http://localhost:3000",
+    "http://localhost:3001",
+]
+if frontend_url and frontend_url not in allowed_origins:
+    allowed_origins.append(frontend_url)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:3001"],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# Health check endpoint for deployment monitoring
+@app.get("/health")
+async def health_check():
+    """Health check endpoint for Render and monitoring services"""
+    return {
+        "status": "healthy",
+        "service": "ntuc-workforce-backend",
+        "version": "1.0.0"
+    }
+
+@app.get("/")
+async def root():
+    """Root endpoint"""
+    return {
+        "message": "NTUC Workforce Intelligence Scraper API",
+        "docs": "/docs",
+        "health": "/health"
+    }
 
 
 # Pydantic models
