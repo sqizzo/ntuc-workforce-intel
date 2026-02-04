@@ -158,6 +158,8 @@ export interface SupportingSignal {
   timeframe: string;
   evidence: string;
   severity: "low" | "medium" | "high";
+  risk_score: number; // 0-100
+  risk_reasoning: string;
 }
 
 export interface PrimarySignal {
@@ -172,6 +174,8 @@ export interface PrimarySignal {
     Social: number;
     Financial: number;
   };
+  risk_score: number; // 0-100
+  risk_reasoning: string;
 }
 
 export interface RiskSummary {
@@ -183,9 +187,18 @@ export interface RiskSummary {
   high_risk_signals: number;
 }
 
+export interface OverallRiskScore {
+  score: number; // 0-100
+  level: "minimal" | "low" | "moderate" | "high" | "severe" | "catastrophic";
+  confidence: "low" | "medium" | "high" | "very_high";
+  reasoning: string;
+}
+
 export interface HypothesisAnalysis {
   company_name: string;
   analysis_timestamp: string;
+  overall_risk_score: OverallRiskScore;
+  major_hypothesis: string;
   risk_summary: RiskSummary;
   primary_signals: PrimarySignal[];
   supporting_signals: SupportingSignal[];

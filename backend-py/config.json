@@ -55,12 +55,9 @@
   },
   "json_dump_settings": {
     "enabled": true,
-    "auto_dump": true,
-    "dump_directory": "dumps",
-    "dump_options": {
-      "include_metadata": true,
-      "include_timestamp": true,
-      "pretty_print": true
-    }
+    "auto_dump": false
+  },
+  "ai_settings": {
+    "enable_relevance_filtering": true
   }
 }

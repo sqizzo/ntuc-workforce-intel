@@ -206,11 +206,18 @@ class RedditScraper:
         self,
         subreddit: str,
         query: str,
-        limit: int = 5
+        limit: int = 5,
+        before_date: Optional[str] = None
     ) -> List[Dict[str, Any]]:
         """
         Search Reddit using JSON API (no selenium needed)
         Returns full signal data including post content
+        
+        Args:
+            subreddit: Subreddit to search
+            query: Search query
+            limit: Maximum number of results
+            before_date: Filter posts before this date (YYYY-MM-DD)
         """
         try:
             # Build Reddit JSON API URL
@@ -235,10 +242,30 @@ class RedditScraper:
                     response = requests.get(search_url, params=params, headers=headers, timeout=15)
                     response.raise_for_status()
                     break
-                except (requests.ConnectionError, requests.Timeout) as e:
-                    if attempt < 2:
+                except requests.ConnectionError as e:
+                    error_msg = str(e)
+                    if "10061" in error_msg or "actively refused" in error_msg.lower():
+                        print(f"❌ Reddit is blocking the connection!")
+                        print(f"   This is Reddit's anti-bot protection.")
+                        print(f"   Solutions:")
+                        print(f"   1. Use a VPN to change your IP address")
+                        print(f"   2. Try from a different network (mobile hotspot)")
+                        print(f"   3. Use Reddit's official API (see REDDIT_TROUBLESHOOTING.md)")
+                        print(f"   4. Skip Reddit scraping (use only Financial/News scrapers)")
+                        raise ConnectionError(
+                            "Reddit blocked the connection. "
+                            "Try using a VPN or see REDDIT_TROUBLESHOOTING.md for solutions."
+                        ) from e
+                    elif attempt < 2:
                         wait_time = (attempt + 1) * 2
                         print(f"⚠️ Connection failed (attempt {attempt + 1}/3), retrying in {wait_time}s...")
+                        time.sleep(wait_time)
+                    else:
+                        raise
+                except requests.Timeout as e:
+                    if attempt < 2:
+                        wait_time = (attempt + 1) * 2
+                        print(f"⚠️ Request timeout (attempt {attempt + 1}/3), retrying in {wait_time}s...")
                         time.sleep(wait_time)
                     else:
                         raise
@@ -255,9 +282,20 @@ class RedditScraper:
                 author = post_data.get('author', 'unknown')
                 subreddit_name = post_data.get('subreddit', subreddit)
                 num_comments = post_data.get('num_comments', 0)
+                created_utc = post_data.get('created_utc', 0)  # Unix timestamp
+                
+                # Filter by date if specified
+                if before_date and created_utc:
+                    post_date = datetime.fromtimestamp(created_utc)
+                    filter_date = self._parse_date(before_date)
+                    if filter_date and post_date >= filter_date:
+                        continue  # Skip posts on or after the filter date
                 
                 if permalink and title:
                     url = f"https://www.reddit.com{permalink}"
+                    
+                    # Convert Unix timestamp to ISO format for display
+                    publish_date = datetime.fromtimestamp(created_utc).isoformat() if created_utc else None
                     
                     # Fetch comments from the thread
                     print(f"  📥 Fetching comments for: {title[:50]}...")
@@ -287,15 +325,28 @@ class RedditScraper:
                         'metadata': {
                             'title': title,
                             'author': author,
-                            'comment_count': num_comments
+                            'comment_count': num_comments,
+                            'publish_date': publish_date
                         }
                     })
             
             print(f"✓ Found {len(signals)} Reddit signals via JSON API")
             return signals
             
+        except ConnectionError as e:
+            # Re-raise connection errors with helpful message
+            print(f"❌ Reddit connection blocked: {e}")
+            print(f"   See REDDIT_TROUBLESHOOTING.md for detailed solutions")
+            raise
         except Exception as e:
-            print(f"❌ JSON API failed: {e}")
+            error_str = str(e).lower()
+            if "10061" in error_str or "refused" in error_str or "connection" in error_str:
+                print(f"❌ Reddit is blocking connections!")
+                print(f"   Error: {e}")
+                print(f"   Solutions: Use VPN, different network, or Reddit's official API")
+                print(f"   See REDDIT_TROUBLESHOOTING.md for details")
+            else:
+                print(f"❌ JSON API failed: {e}")
             return []
     
     def _fetch_comments_json(
@@ -367,7 +418,8 @@ class RedditScraper:
     def search_workforce_signals(
         self,
         subreddit: str = "singapore",
-        keywords: Optional[List[str]] = None
+        keywords: Optional[List[str]] = None,
+        before_date: Optional[str] = None
     ) -> List[Dict[str, Any]]:
         """
         Search Reddit for workforce-related discussions
@@ -376,6 +428,7 @@ class RedditScraper:
         Args:
             subreddit: Subreddit to search
             keywords: Optional keywords to search for
+            before_date: Filter posts before this date (YYYY-MM-DD)
             
         Returns:
             List of workforce signals from Reddit
@@ -388,7 +441,7 @@ class RedditScraper:
                 query = "workforce layoff job"
             
             # Use JSON API (fast and reliable)
-            signals = self.search_using_json_api(subreddit, query, limit=5)
+            signals = self.search_using_json_api(subreddit, query, limit=5, before_date=before_date)
             return signals
             
         except Exception as e:
@@ -409,3 +462,22 @@ class RedditScraper:
             return 'Work Culture & Environment'
         else:
             return 'General Career Discussion'
+    
+    def _parse_date(self, date_str: str) -> Optional[datetime]:
+        """
+        Parse date string to datetime object
+        
+        Args:
+            date_str: Date string in YYYY-MM-DD format
+            
+        Returns:
+            datetime object or None if parsing fails
+        """
+        if not date_str:
+            return None
+        
+        try:
+            return datetime.strptime(date_str, '%Y-%m-%d')
+        except ValueError:
+            return None
+

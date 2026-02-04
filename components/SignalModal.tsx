@@ -75,14 +75,30 @@ export default function SignalModal({
                   </span>
                 </div>
               )}
-              {signal.metadata?.publish_date && (
-                <div>
-                  <span className="font-medium text-gray-700">Published:</span>{" "}
-                  <span className="text-gray-600">
-                    {signal.metadata.publish_date}
-                  </span>
-                </div>
-              )}
+              <div>
+                <span className="font-medium text-gray-700">Published:</span>{" "}
+                <span
+                  className={
+                    signal.metadata?.publish_date
+                      ? "text-blue-600 font-semibold"
+                      : "text-gray-400 italic"
+                  }
+                >
+                  <i className="fas fa-calendar-day mr-1"></i>
+                  {signal.metadata?.publish_date
+                    ? new Date(signal.metadata.publish_date).toLocaleDateString(
+                        "en-US",
+                        {
+                          year: "numeric",
+                          month: "long",
+                          day: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        },
+                      )
+                    : "Unknown"}
+                </span>
+              </div>
               <div>
                 <span className="font-medium text-gray-700">URL:</span>{" "}
                 <a
@@ -210,82 +226,88 @@ export default function SignalModal({
             <h3 className="font-semibold text-gray-900 mb-2">Content</h3>
 
             {/* Social/Reddit structured display */}
-            {signal.source_type === "social" &&
-            signal.metadata?.discussion_data ? (
+            {signal.source_type === "social" && (signal as any).post_title ? (
               <div className="space-y-4">
                 {/* Original Post */}
-                <div className="border-l-4 border-blue-500 bg-blue-50 rounded-r-lg p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center space-x-2">
-                      <i className="fas fa-user-circle text-blue-600 text-lg"></i>
-                      <span className="font-semibold text-gray-900">
-                        {signal.metadata.author || "Anonymous"}
-                      </span>
-                      <span className="text-xs text-gray-500">
-                        • Original Post
-                      </span>
+                <div className="border-l-4 border-blue-500 bg-blue-50 rounded-r-lg p-5 shadow-sm">
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                        <i className="fas fa-user-circle text-blue-600 text-2xl"></i>
+                      </div>
+                      <div>
+                        <span className="font-semibold text-gray-900 block">
+                          {signal.metadata?.author || "Anonymous"}
+                        </span>
+                        <span className="text-xs text-gray-500">
+                          Original Poster
+                        </span>
+                      </div>
                     </div>
-                    {signal.metadata.discussion_data.score && (
-                      <span className="text-sm text-gray-600">
-                        <i className="fas fa-arrow-up text-orange-500 mr-1"></i>
-                        {signal.metadata.discussion_data.score}
+                    {signal.metadata?.comment_count && (
+                      <span className="text-sm text-gray-600 bg-white px-3 py-1 rounded-full border border-gray-200">
+                        <i className="fas fa-comments mr-1 text-blue-600"></i>
+                        {signal.metadata.comment_count} comments
                       </span>
                     )}
                   </div>
-                  <p className="text-gray-800 leading-relaxed whitespace-pre-wrap">
-                    {signal.metadata.discussion_data.selftext ||
-                      signal.extracted_text}
-                  </p>
-                  {signal.metadata.discussion_data.num_comments && (
-                    <div className="mt-3 text-xs text-gray-500">
-                      <i className="fas fa-comments mr-1"></i>
-                      {signal.metadata.discussion_data.num_comments} comments
-                    </div>
+
+                  <h4 className="text-lg font-bold text-gray-900 mb-3">
+                    {(signal as any).post_title}
+                  </h4>
+
+                  {(signal as any).post_text && (
+                    <p className="text-gray-800 leading-relaxed whitespace-pre-wrap bg-white p-3 rounded border border-blue-100">
+                      {(signal as any).post_text}
+                    </p>
                   )}
                 </div>
 
-                {/* Comments */}
-                {signal.metadata.discussion_data.comments &&
-                  signal.metadata.discussion_data.comments.length > 0 && (
+                {/* Comments Section */}
+                {(signal as any).comments &&
+                  (signal as any).comments.length > 0 && (
                     <div className="space-y-3">
-                      <h4 className="font-medium text-gray-900 text-sm flex items-center">
-                        <i className="fas fa-comment-dots mr-2 text-gray-600"></i>
-                        Top Comments (
-                        {signal.metadata.discussion_data.comments.length})
-                      </h4>
-                      {signal.metadata.discussion_data.comments.map(
-                        (comment: any, idx: number) => (
-                          <div
-                            key={idx}
-                            className="border-l-2 border-gray-300 bg-gray-50 rounded-r-lg p-3 hover:bg-gray-100 transition-colors"
-                          >
-                            <div className="flex items-center justify-between mb-2">
-                              <div className="flex items-center space-x-2">
-                                <i className="fas fa-user text-gray-500 text-sm"></i>
-                                <span className="font-medium text-gray-800 text-sm">
-                                  {comment.author || "Anonymous"}
-                                </span>
+                      <div className="flex items-center justify-between">
+                        <h4 className="font-semibold text-gray-900 flex items-center">
+                          <i className="fas fa-comment-dots mr-2 text-blue-600"></i>
+                          Top Comments ({(signal as any).comments.length})
+                        </h4>
+                        <span className="text-xs text-gray-500">
+                          Sorted by score
+                        </span>
+                      </div>
+
+                      <div className="space-y-2">
+                        {(signal as any).comments.map(
+                          (comment: any, idx: number) => (
+                            <div
+                              key={idx}
+                              className="border-l-3 border-gray-300 bg-gray-50 rounded-r-lg p-4 hover:bg-gray-100 transition-all duration-150 hover:shadow-sm"
+                            >
+                              <div className="flex items-center justify-between mb-2">
+                                <div className="flex items-center space-x-2">
+                                  <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
+                                    <i className="fas fa-user text-gray-600 text-sm"></i>
+                                  </div>
+                                  <span className="font-medium text-gray-800">
+                                    {comment.author || "Anonymous"}
+                                  </span>
+                                </div>
+                                {comment.score !== undefined && (
+                                  <div className="bg-white px-3 py-1 rounded border border-gray-200">
+                                    <span className="text-sm font-semibold text-gray-700">
+                                      {comment.score}
+                                    </span>
+                                  </div>
+                                )}
                               </div>
-                              {comment.score && (
-                                <span className="text-xs text-gray-600">
-                                  <i className="fas fa-arrow-up text-orange-400 mr-1"></i>
-                                  {comment.score}
-                                </span>
-                              )}
+                              <p className="text-sm text-gray-700 leading-relaxed pl-10">
+                                {comment.text || comment.body}
+                              </p>
                             </div>
-                            <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
-                              {comment.body}
-                            </p>
-                            {comment.created_utc && (
-                              <div className="mt-2 text-xs text-gray-500">
-                                {new Date(
-                                  comment.created_utc * 1000,
-                                ).toLocaleString()}
-                              </div>
-                            )}
-                          </div>
-                        ),
-                      )}
+                          ),
+                        )}
+                      </div>
                     </div>
                   )}
               </div>

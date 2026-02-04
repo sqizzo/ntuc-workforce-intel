@@ -1,7 +1,12 @@
 "use client";
 
 import React, { useState } from "react";
-import { HypothesisAnalysis, PrimarySignal, SupportingSignal } from "@/types";
+import {
+  HypothesisAnalysis,
+  PrimarySignal,
+  SupportingSignal,
+  OverallRiskScore,
+} from "@/types";
 
 interface HypothesisViewerProps {
   companyName?: string;
@@ -73,6 +78,33 @@ export default function HypothesisViewer({
       default:
         return "text-gray-600 bg-gray-100 border-gray-300";
     }
+  };
+
+  const getRiskLevelColor = (level: string) => {
+    switch (level) {
+      case "catastrophic":
+        return "text-red-900 bg-red-200 border-red-500";
+      case "severe":
+        return "text-red-700 bg-red-100 border-red-400";
+      case "high":
+        return "text-orange-700 bg-orange-100 border-orange-400";
+      case "moderate":
+        return "text-yellow-700 bg-yellow-100 border-yellow-400";
+      case "low":
+        return "text-green-700 bg-green-100 border-green-400";
+      case "minimal":
+        return "text-blue-700 bg-blue-100 border-blue-400";
+      default:
+        return "text-gray-600 bg-gray-100 border-gray-300";
+    }
+  };
+
+  const getRiskScoreColor = (score: number) => {
+    if (score >= 80) return "text-red-700 font-bold";
+    if (score >= 60) return "text-orange-700 font-bold";
+    if (score >= 40) return "text-yellow-700 font-semibold";
+    if (score >= 20) return "text-green-700 font-semibold";
+    return "text-blue-700";
   };
 
   const getSupportingSignals = (
@@ -234,6 +266,73 @@ export default function HypothesisViewer({
 
       {analysis && !loading && (
         <div className="space-y-6">
+          {/* Overall Risk Score - Featured Section */}
+          <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg shadow-lg p-8 border-2 border-blue-200">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-3xl font-bold text-gray-800">
+                Overall Risk Assessment
+              </h2>
+              <div
+                className={`px-6 py-3 rounded-full text-xl font-bold border-3 ${getRiskLevelColor(analysis.overall_risk_score.level)}`}
+              >
+                {analysis.overall_risk_score.level.toUpperCase()}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+              <div className="bg-white rounded-lg p-6 shadow-md border border-gray-200">
+                <p className="text-sm font-medium text-gray-600 mb-2">
+                  Risk Score
+                </p>
+                <p
+                  className={`text-5xl font-bold ${getRiskScoreColor(analysis.overall_risk_score.score)}`}
+                >
+                  {analysis.overall_risk_score.score}
+                  <span className="text-2xl text-gray-500">/100</span>
+                </p>
+              </div>
+              <div className="bg-white rounded-lg p-6 shadow-md border border-gray-200">
+                <p className="text-sm font-medium text-gray-600 mb-2">
+                  Confidence
+                </p>
+                <p className="text-3xl font-bold text-blue-700 uppercase">
+                  {analysis.overall_risk_score.confidence.replace("_", " ")}
+                </p>
+              </div>
+              <div className="bg-white rounded-lg p-6 shadow-md border border-gray-200">
+                <p className="text-sm font-medium text-gray-600 mb-2">
+                  Company
+                </p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {analysis.company_name}
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-lg p-6 shadow-md border border-gray-200">
+              <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center">
+                <i className="fas fa-brain mr-2 text-purple-600"></i>
+                AI Risk Analysis
+              </h3>
+              <p className="text-gray-700 leading-relaxed">
+                {analysis.overall_risk_score.reasoning}
+              </p>
+            </div>
+          </div>
+
+          {/* Major Hypothesis - Key Insight */}
+          <div className="bg-white rounded-lg shadow-lg p-8 border-l-4 border-purple-500">
+            <h2 className="text-2xl font-bold text-gray-800 mb-4 flex items-center">
+              <i className="fas fa-lightbulb mr-3 text-yellow-500"></i>
+              Major Hypothesis
+            </h2>
+            <div className="bg-purple-50 rounded-lg p-6 border border-purple-200">
+              <p className="text-gray-800 text-lg leading-relaxed">
+                {analysis.major_hypothesis}
+              </p>
+            </div>
+          </div>
+
           {/* Risk Summary */}
           <div className="bg-white rounded-lg shadow-md p-6">
             <h2 className="text-2xl font-bold text-gray-800 mb-4">
@@ -296,20 +395,37 @@ export default function HypothesisViewer({
                   onClick={() => setSelectedPrimarySignal(primarySignal)}
                 >
                   <div className="flex justify-between items-start mb-2">
-                    <h4 className="font-bold text-lg text-gray-800">
-                      {primarySignal.title}
-                    </h4>
-                    <span
-                      className={`px-3 py-1 rounded-full text-xs font-semibold ${getRiskColor(
-                        primarySignal.risk_level,
-                      )}`}
-                    >
-                      {primarySignal.risk_level.toUpperCase()}
-                    </span>
+                    <div className="flex-1">
+                      <h4 className="font-bold text-lg text-gray-800 mb-1">
+                        {primarySignal.title}
+                      </h4>
+                      <div className="flex items-center gap-3">
+                        <span
+                          className={`text-3xl ${getRiskScoreColor(primarySignal.risk_score)}`}
+                        >
+                          {primarySignal.risk_score}
+                        </span>
+                        <span
+                          className={`px-3 py-1 rounded-full text-xs font-semibold ${getRiskColor(
+                            primarySignal.risk_level,
+                          )}`}
+                        >
+                          {primarySignal.risk_level.toUpperCase()}
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                  <p className="text-sm text-gray-600 mb-3">
+                  <p className="text-sm text-gray-600 mb-2">
                     {primarySignal.description}
                   </p>
+                  <div className="bg-gray-50 rounded p-3 mb-3 border border-gray-200">
+                    <p className="text-xs font-semibold text-gray-700 mb-1">
+                      Risk Analysis:
+                    </p>
+                    <p className="text-xs text-gray-700 italic">
+                      {primarySignal.risk_reasoning}
+                    </p>
+                  </div>
                   <div className="mb-3">
                     <p className="text-xs font-medium text-gray-700 mb-1">
                       Key Indicators:
@@ -377,16 +493,25 @@ export default function HypothesisViewer({
                       className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50"
                     >
                       <div className="flex justify-between items-start mb-2">
-                        <h5 className="font-semibold text-gray-800">
-                          {signal.title}
-                        </h5>
-                        <span
-                          className={`px-2 py-1 rounded text-xs font-semibold ${getRiskColor(
-                            signal.severity,
-                          )}`}
-                        >
-                          {signal.severity}
-                        </span>
+                        <div className="flex-1">
+                          <h5 className="font-semibold text-gray-800 mb-1">
+                            {signal.title}
+                          </h5>
+                          <div className="flex items-center gap-2">
+                            <span
+                              className={`text-2xl ${getRiskScoreColor(signal.risk_score)}`}
+                            >
+                              {signal.risk_score}
+                            </span>
+                            <span
+                              className={`px-2 py-1 rounded text-xs font-semibold ${getRiskColor(
+                                signal.severity,
+                              )}`}
+                            >
+                              {signal.severity}
+                            </span>
+                          </div>
+                        </div>
                       </div>
                       <div className="flex gap-4 text-xs text-gray-600 mb-2">
                         <span className="flex items-center gap-1">
@@ -398,7 +523,16 @@ export default function HypothesisViewer({
                           {signal.timeframe}
                         </span>
                       </div>
+                      <div className="bg-blue-50 rounded p-3 mb-2 border border-blue-200">
+                        <p className="text-xs font-semibold text-gray-700 mb-1">
+                          AI Risk Analysis:
+                        </p>
+                        <p className="text-xs text-gray-700">
+                          {signal.risk_reasoning}
+                        </p>
+                      </div>
                       <p className="text-sm text-gray-700 bg-gray-50 p-3 rounded">
+                        <span className="font-medium">Evidence: </span>
                         {signal.evidence}
                       </p>
                     </div>

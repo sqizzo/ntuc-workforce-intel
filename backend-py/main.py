@@ -15,7 +15,7 @@ from scrapers.news_scraper import NewsSearchScraper
 from scrapers.reddit_scraper import RedditScraper
 from json_dump_manager import JSONDumpManager
 from hypothesis_engine import HypothesisEngine
-from ai_service import AIService
+from ai_service import AIService, WorkforceRelevanceFilter
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -45,6 +45,7 @@ dump_manager = JSONDumpManager(
 # Initialize AI service and hypothesis engine
 ai_service = AIService()
 hypothesis_engine = HypothesisEngine(ai_service)
+relevance_filter = WorkforceRelevanceFilter(ai_service)
 
 # Create FastAPI app
 app = FastAPI(
@@ -80,6 +81,8 @@ class ScrapeRequest(BaseModel):
     subreddit: Optional[str] = Field(default="singapore", description="Subreddit for Reddit scraping")
     max_articles: Optional[int] = Field(default=10, description="Maximum articles to scrape")
     auto_dump: Optional[bool] = Field(default=None, description="Automatically dump results to JSON")
+    before_date: Optional[str] = Field(default=None, description="Filter data before this date (YYYY-MM-DD format)")
+    enable_smart_filtering: Optional[bool] = Field(default=True, description="Enable AI-powered relevance filtering")
 
 
 class DumpRequest(BaseModel):
@@ -159,7 +162,7 @@ async def scrape_workforce_signals(request: ScrapeRequest):
             max_articles = request.max_articles or CONFIG.get('scraper_settings', {}).get('max_articles', 10)
             
             news_scraper = NewsSearchScraper(max_articles=max_articles, general_sources=general_sources)
-            signals = news_scraper.search_workforce_signals(request.keywords)
+            signals = news_scraper.search_workforce_signals(request.keywords, before_date=request.before_date)
             
         elif request.mode == ScraperMode.REDDIT:
             # Reddit scraping - search across multiple subreddits
@@ -171,7 +174,8 @@ async def scrape_workforce_signals(request: ScrapeRequest):
                 try:
                     subreddit_signals = reddit_scraper.search_workforce_signals(
                         subreddit=subreddit,
-                        keywords=request.keywords
+                        keywords=request.keywords,
+                        before_date=request.before_date
                     )
                     signals.extend(subreddit_signals)
                     logger.info(f"Found {len(subreddit_signals)} signals from r/{subreddit}")
@@ -196,7 +200,7 @@ async def scrape_workforce_signals(request: ScrapeRequest):
             try:
                 company_sources = [s for s in CONFIG.get('company_search_sources', []) if s.get('enabled', True)]
                 news_scraper = NewsSearchScraper(max_articles=5, company_sources=company_sources)
-                news_signals = news_scraper.search_workforce_signals_company(request.companyName)
+                news_signals = news_scraper.search_workforce_signals_company(request.companyName, before_date=request.before_date)
                 signals.extend(news_signals)
             except Exception as e:
                 logger.warning(f"News scraping failed: {e}")
@@ -210,7 +214,8 @@ async def scrape_workforce_signals(request: ScrapeRequest):
                     try:
                         subreddit_signals = reddit_scraper.search_workforce_signals(
                             subreddit=subreddit,
-                            keywords=[request.companyName]
+                            keywords=[request.companyName],
+                            before_date=request.before_date
                         )
                         signals.extend(subreddit_signals)
                         logger.info(f"Found {len(subreddit_signals)} Reddit signals from r/{subreddit} for {request.companyName}")
@@ -237,6 +242,37 @@ async def scrape_workforce_signals(request: ScrapeRequest):
                     logger.error(f"Workforce extraction failed: {e}", exc_info=True)
                     # Don't fail the entire request, just skip this enhancement
             
+            # Apply AI-powered relevance filtering for company mode signals
+            if signals and request.enable_smart_filtering:
+                logger.info(f"Applying AI relevance filtering to {len(signals)} company signals...")
+                filtered_signals = []
+                
+                for signal in signals:
+                    try:
+                        # Get title and content for relevance check
+                        title = signal.get('metadata', {}).get('title', '') or signal.get('post_title', '') or signal.get('extracted_text', '')[:100]
+                        content = signal.get('extracted_text', '') or signal.get('post_text', '')
+                        
+                        # Check relevance WITH company context
+                        relevance_result = relevance_filter.check_relevance(title, content[:500], company_name=request.companyName)
+                        
+                        # Add relevance info to signal
+                        signal['relevance'] = relevance_result
+                        
+                        # Only keep relevant signals
+                        if relevance_result.get('is_relevant', False):
+                            filtered_signals.append(signal)
+                        else:
+                            logger.info(f"Filtered out irrelevant signal: {title[:50]}... - {relevance_result.get('rationale', 'No reason')[:50]}")
+                            
+                    except Exception as e:
+                        logger.warning(f"Error filtering signal: {e}, keeping signal by default")
+                        filtered_signals.append(signal)
+                
+                original_count = len(signals)
+                signals = filtered_signals
+                logger.info(f"Relevance filtering complete: {original_count} -> {len(signals)} signals (filtered out {original_count - len(signals)})")
+            
             # If we have financial data, return the full structure
             if financial_result:
                 financial_result['signals'] = signals  # Include all signals
@@ -255,7 +291,7 @@ async def scrape_workforce_signals(request: ScrapeRequest):
             # News scraping with general sources
             try:
                 news_scraper = NewsSearchScraper(max_articles=max_articles, general_sources=general_sources)
-                news_signals = news_scraper.search_workforce_signals(request.keywords)
+                news_signals = news_scraper.search_workforce_signals(request.keywords, before_date=request.before_date)
                 signals.extend(news_signals)
             except Exception as e:
                 logger.warning(f"News scraping failed: {e}")
@@ -264,13 +300,45 @@ async def scrape_workforce_signals(request: ScrapeRequest):
             try:
                 reddit_scraper = RedditScraper()
                 reddit_signals = reddit_scraper.search_workforce_signals(
-                    keywords=request.keywords
+                    keywords=request.keywords,
+                    before_date=request.before_date
                 )
                 signals.extend(reddit_signals)
             except Exception as e:
                 logger.warning(f"Reddit scraping failed: {e}")
         
         logger.info(f"Successfully scraped {len(signals)} signals")
+        
+        # Apply AI-powered relevance filtering
+        if signals and request.enable_smart_filtering:
+            logger.info(f"Applying AI relevance filtering to {len(signals)} signals...")
+            filtered_signals = []
+            
+            for signal in signals:
+                try:
+                    # Get title and content for relevance check
+                    title = signal.get('metadata', {}).get('title', '') or signal.get('post_title', '') or signal.get('extracted_text', '')[:100]
+                    content = signal.get('extracted_text', '') or signal.get('post_text', '')
+                    
+                    # Check relevance (no company context for general mode)
+                    relevance_result = relevance_filter.check_relevance(title, content[:500], company_name=None)
+                    
+                    # Add relevance info to signal
+                    signal['relevance'] = relevance_result
+                    
+                    # Only keep relevant signals
+                    if relevance_result.get('is_relevant', False):
+                        filtered_signals.append(signal)
+                    else:
+                        logger.info(f"Filtered out irrelevant signal: {title[:50]}... - {relevance_result.get('rationale', 'No reason')[:50]}")
+                        
+                except Exception as e:
+                    logger.warning(f"Error filtering signal: {e}, keeping signal by default")
+                    filtered_signals.append(signal)
+            
+            original_count = len(signals)
+            signals = filtered_signals
+            logger.info(f"Relevance filtering complete: {original_count} -> {len(signals)} signals (filtered out {original_count - len(signals)})")
         
         # Auto-dump if enabled
         auto_dump = request.auto_dump if request.auto_dump is not None else CONFIG.get('json_dump_settings', {}).get('auto_dump', False)

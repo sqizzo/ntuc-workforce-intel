@@ -60,23 +60,41 @@ def test_hypothesis_engine():
         print("ANALYSIS RESULTS")
         print("="*60)
         
-        risk_summary = result['risk_summary']
-        print(f"\nOverall Risk: {risk_summary['overall_risk'].upper()}")
-        print(f"Confidence: {risk_summary['confidence'].upper()}")
-        print(f"Summary: {risk_summary['summary']}")
-        print(f"Recommendation: {risk_summary['recommendation']}")
+        # Overall Risk Score
+        overall_risk = result.get('overall_risk_score', {})
+        print(f"\n🎯 OVERALL RISK SCORE: {overall_risk.get('score', 0)}/100")
+        print(f"   Level: {overall_risk.get('level', 'unknown').upper()}")
+        print(f"   Confidence: {overall_risk.get('confidence', 'unknown').upper()}")
+        print(f"   Reasoning: {overall_risk.get('reasoning', 'N/A')}")
         
-        print(f"\n\nPrimary Signals Identified: {len(result['primary_signals'])}")
+        # Major Hypothesis
+        major_hypothesis = result.get('major_hypothesis', 'N/A')
+        print(f"\n📋 MAJOR HYPOTHESIS:")
+        print(f"   {major_hypothesis}")
+        
+        # Risk Summary
+        risk_summary = result['risk_summary']
+        print(f"\n\n📊 RISK SUMMARY:")
+        print(f"   Overall Risk: {risk_summary['overall_risk'].upper()}")
+        print(f"   Confidence: {risk_summary['confidence'].upper()}")
+        print(f"   Summary: {risk_summary['summary']}")
+        print(f"   Recommendation: {risk_summary['recommendation']}")
+        
+        print(f"\n\n🎯 PRIMARY SIGNALS: {len(result['primary_signals'])}")
         for i, ps in enumerate(result['primary_signals'], 1):
             print(f"\n{i}. {ps['title']} (Risk: {ps['risk_level'].upper()})")
+            print(f"   Score: {ps.get('risk_score', 'N/A')}/100")
             print(f"   {ps['description']}")
+            print(f"   Risk Reasoning: {ps.get('risk_reasoning', 'N/A')}")
             print(f"   Supporting Signals: {len(ps['supporting_signal_ids'])}")
             print(f"   Key Indicators: {', '.join(ps['key_indicators'][:3])}")
         
-        print(f"\n\nSupporting Signals: {len(result['supporting_signals'])}")
+        print(f"\n\n📌 SUPPORTING SIGNALS: {len(result['supporting_signals'])}")
         for i, ss in enumerate(result['supporting_signals'][:5], 1):
             print(f"\n{i}. {ss['title']} ({ss['source_type']}, {ss['timeframe']})")
+            print(f"   Score: {ss.get('risk_score', 'N/A')}/100")
             print(f"   Severity: {ss['severity']}")
+            print(f"   Risk Reasoning: {ss.get('risk_reasoning', 'N/A')}")
             print(f"   Evidence: {ss['evidence'][:100]}...")
         
         if len(result['supporting_signals']) > 5:

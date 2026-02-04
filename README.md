@@ -2,6 +2,8 @@
 
 A full-stack application for scraping and analyzing workforce intelligence signals using Python scrapers and a Next.js frontend.
 
+> **⚠️ Reddit Scraping Issues?** If you get a connection error (WinError 10061), see **[QUICK_FIX_REDDIT.md](QUICK_FIX_REDDIT.md)** for instant solutions!
+
 ## Architecture
 
 - **Frontend**: Next.js 15 with React 19 and Tailwind CSS
@@ -268,6 +270,22 @@ npm start
 - Install Chrome/Chromium browser
 - Update ChromeDriver: `pip install --upgrade undetected-chromedriver`
 - Check for firewall/antivirus blocking
+
+### Reddit Connection Error (WinError 10061)
+
+If you get: `Failed to establish a new connection: [WinError 10061]`
+
+**This means Reddit is blocking the connection.** Solutions:
+
+1. **Use a VPN or different network** - Reddit may be blocking your IP/network
+2. **Check firewall/antivirus** - Allow Python/outbound connections to reddit.com
+3. **Skip Reddit scraping** - Use only Financial and News scrapers
+4. **Use Reddit's Official API** (recommended for production):
+   - Create app at https://www.reddit.com/prefs/apps
+   - Use PRAW library instead of direct scraping
+   - See [backend-py/README.md](backend-py/README.md) for details
+
+**Note**: Reddit actively blocks automated requests. The scraper has retry logic but may still fail depending on your network/location.
 
 ### Next.js Build Errors
 

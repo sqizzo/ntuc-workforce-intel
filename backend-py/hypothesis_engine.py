@@ -59,17 +59,38 @@ class HypothesisEngine:
             company_name, supporting_signals
         )
         
-        # Step 4: Generate overall risk assessment
+        # Step 4: AI-powered risk scoring for all signals
+        supporting_signals_with_scores = self._add_ai_risk_scores_to_supporting_signals(
+            company_name, supporting_signals
+        )
+        
+        primary_signals_with_scores = self._add_ai_risk_scores_to_primary_signals(
+            company_name, primary_signals, supporting_signals_with_scores
+        )
+        
+        # Step 5: Calculate overall risk score using AI
+        overall_risk_score = self._calculate_overall_risk_score(
+            company_name, primary_signals_with_scores, supporting_signals_with_scores, financial_data
+        )
+        
+        # Step 6: Generate major hypothesis synthesizing all signals
+        major_hypothesis = self._generate_major_hypothesis(
+            company_name, primary_signals_with_scores, supporting_signals_with_scores, overall_risk_score
+        )
+        
+        # Step 7: Generate overall risk assessment
         risk_summary = self._generate_risk_summary(
-            company_name, primary_signals, financial_data
+            company_name, primary_signals_with_scores, financial_data
         )
         
         return {
             "company_name": company_name,
             "analysis_timestamp": datetime.utcnow().isoformat(),
+            "overall_risk_score": overall_risk_score,
+            "major_hypothesis": major_hypothesis,
             "risk_summary": risk_summary,
-            "primary_signals": primary_signals,
-            "supporting_signals": supporting_signals,
+            "primary_signals": primary_signals_with_scores,
+            "supporting_signals": supporting_signals_with_scores,
             "data_sources": {
                 "news_count": len(news_signals),
                 "social_count": len(social_signals),
@@ -422,6 +443,7 @@ Respond with ONLY valid JSON, no markdown formatting."""
         company_name: str,
         supporting_signals: List[Dict[str, Any]]
     ) -> str:
+        # Might need to be open ended
         """Generate prompt for grouping into primary signals"""
         signals_json = json.dumps(supporting_signals, indent=2)
         
@@ -436,6 +458,8 @@ Group these supporting signals into primary signal categories based on similar t
 - FINANCIAL DISTRESS (losses, debt, poor performance)
 - MARKET PERCEPTION (reputation, customer concerns)
 - WORKFORCE ISSUES (layoffs, employee concerns)
+- PRODUCT & CUSTOMER VALUE EROSION
+- STRATEGIC ANOMALIES
 - REGULATORY/LEGAL RISKS
 - INDUSTRY CHALLENGES
 
@@ -556,3 +580,353 @@ Respond with ONLY valid JSON, no markdown formatting."""
             "low": "Maintain standard monitoring procedures. Continue tracking key indicators."
         }
         return recommendations.get(risk_level, "Continue monitoring")
+    
+    def _add_ai_risk_scores_to_supporting_signals(
+        self,
+        company_name: str,
+        supporting_signals: List[Dict[str, Any]]
+    ) -> List[Dict[str, Any]]:
+        """
+        Add AI-powered risk scores to each supporting signal based on Singapore workforce context
+        
+        Args:
+            company_name: Company name
+            supporting_signals: List of supporting signals
+            
+        Returns:
+            Supporting signals with added risk_score and risk_reasoning
+        """
+        if not supporting_signals:
+            return []
+        
+        prompt = f"""You are a Singapore workforce intelligence analyst. Analyze each supporting signal for "{company_name}" and assign a risk score (0-100) based on its impact on Singapore's workforce.
+
+CONTEXT: Singapore Workforce Risk Factors
+- Job losses and unemployment impact
+- Skills mismatch and retraining needs
+- Industry disruption and economic ripple effects
+- Worker welfare and employment conditions
+- Business sustainability affecting livelihoods
+
+SUPPORTING SIGNALS:
+{json.dumps(supporting_signals, indent=2)}
+
+TASK:
+For each supporting signal, provide:
+1. risk_score: Integer 0-100 where:
+   - 80-100: Critical workforce impact (mass layoffs, major closures)
+   - 60-79: High workforce impact (significant job losses, industry decline)
+   - 40-59: Medium workforce impact (operational issues, potential job risks)
+   - 20-39: Low workforce impact (minor concerns, limited job impact)
+   - 0-19: Minimal workforce impact (general business concerns)
+
+2. risk_reasoning: 1-2 sentences explaining the score in Singapore workforce context
+
+Return JSON:
+{{
+    "scored_signals": [
+        {{
+            "id": "ss_1",
+            "risk_score": 85,
+            "risk_reasoning": "Store closures directly threaten jobs of Singapore retail workers and indicate broader industry instability affecting livelihoods."
+        }}
+    ]
+}}
+
+Respond with ONLY valid JSON, no markdown formatting."""
+        
+        try:
+            response = self.ai_service.query(prompt, temperature=0.2, max_tokens=2500)
+            result = json.loads(response)
+            scored_signals_map = {s['id']: s for s in result.get('scored_signals', [])}
+            
+            # Add scores to original signals
+            enhanced_signals = []
+            for signal in supporting_signals:
+                signal_copy = signal.copy()
+                score_data = scored_signals_map.get(signal['id'], {})
+                signal_copy['risk_score'] = score_data.get('risk_score', 50)
+                signal_copy['risk_reasoning'] = score_data.get('risk_reasoning', 'Risk assessment pending')
+                enhanced_signals.append(signal_copy)
+            
+            return enhanced_signals
+        except Exception as e:
+            logger.error(f"Error adding risk scores to supporting signals: {e}")
+            # Fallback: assign default scores based on severity
+            for signal in supporting_signals:
+                severity_scores = {'high': 75, 'medium': 50, 'low': 25}
+                signal['risk_score'] = severity_scores.get(signal.get('severity', 'medium'), 50)
+                signal['risk_reasoning'] = 'Default risk assessment based on severity'
+            return supporting_signals
+    
+    def _add_ai_risk_scores_to_primary_signals(
+        self,
+        company_name: str,
+        primary_signals: List[Dict[str, Any]],
+        supporting_signals: List[Dict[str, Any]]
+    ) -> List[Dict[str, Any]]:
+        """
+        Add AI-powered risk scores to each primary signal based on its supporting signals
+        
+        Args:
+            company_name: Company name
+            primary_signals: List of primary signals
+            supporting_signals: List of supporting signals with scores
+            
+        Returns:
+            Primary signals with added risk_score and risk_reasoning
+        """
+        if not primary_signals:
+            return []
+        
+        # Create mapping of supporting signals
+        supporting_map = {s['id']: s for s in supporting_signals}
+        
+        prompt = f"""You are a Singapore workforce intelligence analyst. Analyze each primary signal for "{company_name}" and assign a comprehensive risk score (0-100).
+
+PRIMARY SIGNALS WITH SUPPORTING EVIDENCE:
+{json.dumps(primary_signals, indent=2)}
+
+SUPPORTING SIGNALS DETAILS:
+{json.dumps(supporting_signals, indent=2)}
+
+CRITICAL SCORING RULE:
+The primary signal's risk_score MUST be primarily derived from its supporting signals' risk_scores.
+- Calculate the average/weighted average of supporting signals' risk_scores
+- Adjust up/down by maximum ±20 points based on:
+  * Volume of evidence (more supporting signals = higher confidence)
+  * Pattern consistency (reinforcing evidence = higher risk)
+  * Temporal factors (recent signals = higher weight)
+  * Cross-signal correlation (interconnected risks = amplification)
+
+TASK:
+For each primary signal, provide:
+1. risk_score: Integer 0-100 that:
+   - STARTS with the average of its supporting signals' risk_scores
+   - Then applies adjustment factors (max ±20 points)
+   - Example: If 3 supporting signals have scores [20, 20, 25], base = 21.67, final could be 25-41
+
+2. risk_reasoning: 2-3 sentences explaining:
+   - Base score from supporting signals (mention their scores)
+   - Any adjustment factors applied and why
+   - Singapore workforce implications
+
+Return JSON:
+{{
+    "scored_primary_signals": [
+        {{
+            "id": "ps_1",
+            "risk_score": 35,
+            "risk_reasoning": "Based on 3 supporting signals averaging 21.67 (scores: 20, 20, 25), adjusted up to 35 due to multiple sources confirming the pattern. Indicates growing market skepticism affecting business viability and potential job security concerns in Singapore retail sector."
+        }}
+    ]
+}}
+
+Respond with ONLY valid JSON, no markdown formatting."""
+        
+        try:
+            response = self.ai_service.query(prompt, temperature=0.2, max_tokens=2500)
+            result = json.loads(response)
+            scored_primary_map = {s['id']: s for s in result.get('scored_primary_signals', [])}
+            
+            # Add scores to original primary signals
+            enhanced_primary = []
+            for primary in primary_signals:
+                primary_copy = primary.copy()
+                score_data = scored_primary_map.get(primary['id'], {})
+                primary_copy['risk_score'] = score_data.get('risk_score', 60)
+                primary_copy['risk_reasoning'] = score_data.get('risk_reasoning', 'Risk assessment pending')
+                enhanced_primary.append(primary_copy)
+            
+            return enhanced_primary
+        except Exception as e:
+            logger.error(f"Error adding risk scores to primary signals: {e}")
+            # Fallback: calculate from supporting signals
+            for primary in primary_signals:
+                supporting_ids = primary.get('supporting_signal_ids', [])
+                supporting_scores = [supporting_map[sid]['risk_score'] for sid in supporting_ids if sid in supporting_map]
+                if supporting_scores:
+                    # Calculate average and add small boost for multiple signals (max +10)
+                    base_score = sum(supporting_scores) / len(supporting_scores)
+                    volume_boost = min(len(supporting_scores) * 2, 10)  # +2 per signal, max +10
+                    primary['risk_score'] = int(min(base_score + volume_boost, 100))
+                    primary['risk_reasoning'] = f'Calculated from {len(supporting_scores)} supporting signals (avg: {base_score:.1f}, +{volume_boost} volume boost)'
+                else:
+                    primary['risk_score'] = 50
+                    primary['risk_reasoning'] = 'No supporting signals available for scoring'
+            return primary_signals
+    
+    def _calculate_overall_risk_score(
+        self,
+        company_name: str,
+        primary_signals: List[Dict[str, Any]],
+        supporting_signals: List[Dict[str, Any]],
+        financial_data: Optional[Dict[str, Any]]
+    ) -> Dict[str, Any]:
+        """
+        Calculate overall risk score using AI to understand context and patterns
+        
+        Args:
+            company_name: Company name
+            primary_signals: List of primary signals with scores
+            supporting_signals: List of supporting signals with scores
+            financial_data: Optional financial data
+            
+        Returns:
+            Overall risk score with reasoning and confidence
+        """
+        if not primary_signals:
+            return {
+                "score": 0,
+                "level": "minimal",
+                "confidence": "low",
+                "reasoning": "Insufficient data for comprehensive risk assessment"
+            }
+        
+        # Prepare financial context
+        financial_context = "No financial data available"
+        if financial_data:
+            summary = financial_data.get('financial_data', {}).get('summary', {})
+            financial_context = f"""Financial Data:
+- Market Cap: {summary.get('market_cap', 'N/A')}
+- Employees: {summary.get('employees', 'N/A')}
+- Profit Margin: {summary.get('profit_margin', 'N/A')}
+- Sector: {summary.get('sector', 'N/A')}"""
+        
+        prompt = f"""You are a Singapore workforce intelligence analyst. Calculate the OVERALL RISK SCORE for "{company_name}" considering all available evidence.
+
+PRIMARY SIGNALS:
+{json.dumps(primary_signals, indent=2)}
+
+SUPPORTING SIGNALS COUNT: {len(supporting_signals)}
+High-risk supporting signals: {len([s for s in supporting_signals if s.get('risk_score', 0) >= 70])}
+
+{financial_context}
+
+TASK:
+Analyze ALL evidence comprehensively and provide:
+
+1. score: Integer 0-100 representing overall workforce risk:
+   - 90-100: Catastrophic (imminent collapse, mass unemployment)
+   - 75-89: Severe (major job losses likely, industry crisis)
+   - 60-74: High (significant workforce impact probable)
+   - 40-59: Moderate (notable concerns, some job risk)
+   - 20-39: Low (minor concerns, limited impact)
+   - 0-19: Minimal (stable situation)
+
+2. level: "catastrophic", "severe", "high", "moderate", "low", or "minimal"
+
+3. confidence: "very_high", "high", "medium", or "low" based on:
+   - Data source diversity (news + social + financial)
+   - Consistency across signals
+   - Timespan of evidence
+   - Specificity of information
+
+4. reasoning: 3-4 sentences explaining:
+   - How all signals converge or diverge
+   - Key patterns across evidence
+   - Specific Singapore workforce implications
+   - Why this score reflects the overall situation
+
+CONSIDER:
+- Do multiple independent sources corroborate the same concerns?
+- Are risks isolated or systemic?
+- What is the potential scale of workforce impact?
+- How does this affect Singapore's economic stability?
+
+Return JSON:
+{{
+    "score": 85,
+    "level": "severe",
+    "confidence": "high",
+    "reasoning": "Convergent evidence from social discourse, news reports, and operational data shows sustained business decline over 5+ years. Multiple store closures confirmed across Singapore. Public perception indicates terminal trajectory. Threatens 200+ retail jobs in critical F&B sector."
+}}
+
+Respond with ONLY valid JSON, no markdown formatting."""
+        
+        try:
+            response = self.ai_service.query(prompt, temperature=0.2, max_tokens=1500)
+            result = json.loads(response)
+            return result
+        except Exception as e:
+            logger.error(f"Error calculating overall risk score: {e}")
+            # Fallback calculation
+            avg_primary_score = sum(p.get('risk_score', 50) for p in primary_signals) / len(primary_signals)
+            return {
+                "score": int(avg_primary_score),
+                "level": "moderate" if avg_primary_score < 60 else "high",
+                "confidence": "medium",
+                "reasoning": f"Calculated from {len(primary_signals)} primary signals with average risk score of {avg_primary_score:.1f}"
+            }
+    
+    def _generate_major_hypothesis(
+        self,
+        company_name: str,
+        primary_signals: List[Dict[str, Any]],
+        supporting_signals: List[Dict[str, Any]],
+        overall_risk_score: Dict[str, Any]
+    ) -> str:
+        """
+        Generate a comprehensive major hypothesis paragraph synthesizing all signals
+        
+        Args:
+            company_name: Company name
+            primary_signals: List of primary signals with scores
+            supporting_signals: List of supporting signals with scores
+            overall_risk_score: Overall risk score with reasoning
+            
+        Returns:
+            Major hypothesis as a paragraph
+        """
+        if not primary_signals:
+            return f"Insufficient data to generate comprehensive hypothesis for {company_name}."
+        
+        prompt = f"""You are a Singapore workforce intelligence analyst. Generate a MAJOR HYPOTHESIS paragraph for "{company_name}" that synthesizes ALL evidence into a coherent narrative.
+
+OVERALL RISK SCORE: {overall_risk_score.get('score')}/100 ({overall_risk_score.get('level', 'unknown').upper()})
+
+PRIMARY SIGNALS:
+{json.dumps(primary_signals, indent=2)}
+
+SUPPORTING SIGNALS:
+{json.dumps(supporting_signals, indent=2)}
+
+TASK:
+Write a single comprehensive paragraph (150-250 words) that:
+
+1. Presents the major hypothesis about {company_name}'s workforce risk
+2. Incorporates ALL primary signals and their key themes
+3. References critical supporting signal evidence
+4. Explains the interconnections between different risk factors
+5. Contextualizes within Singapore's workforce/economy
+6. Concludes with the overall risk assessment and implications
+
+STYLE:
+- Professional and analytical tone
+- Flow naturally, not as a list
+- Use specific evidence ("X store closures", "Y employees affected")
+- Make causal connections between signals
+- Emphasize workforce/employment impact
+
+EXAMPLE STRUCTURE:
+"[Company] faces [primary risk theme] characterized by [key evidence]. [Second primary signal] compounds this through [supporting evidence], while [third signal] indicates [pattern]. Analysis of [source types] reveals [convergent pattern]. This situation threatens [X] jobs in Singapore's [sector], with [timeframe] implications. Overall assessment: [risk level] risk of [specific workforce impact]."
+
+Return JSON:
+{{
+    "major_hypothesis": "Your comprehensive paragraph here..."
+}}
+
+Respond with ONLY valid JSON, no markdown formatting."""
+        
+        try:
+            response = self.ai_service.query(prompt, temperature=0.3, max_tokens=1500)
+            result = json.loads(response)
+            return result.get('major_hypothesis', '')
+        except Exception as e:
+            logger.error(f"Error generating major hypothesis: {e}")
+            # Fallback: create basic hypothesis
+            primary_themes = [p['title'] for p in primary_signals[:3]]
+            themes_text = ', '.join(primary_themes)
+            return f"{company_name} exhibits multiple risk indicators including {themes_text}. Analysis of {len(supporting_signals)} supporting signals from news, social, and financial sources reveals converging evidence of business challenges. The overall risk score of {overall_risk_score.get('score', 0)}/100 suggests {overall_risk_score.get('level', 'moderate')} risk to Singapore workforce stability. Immediate attention to employment implications is warranted."
+
+

@@ -9,12 +9,15 @@ export const maxDuration = 1800;
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { mode, keywords, companyName } = body;
+    const { mode, keywords, companyName, before_date, enable_smart_filtering } =
+      body;
 
     console.log("Forwarding scrape request to Python backend:", {
       mode,
       keywords,
       companyName,
+      before_date,
+      enable_smart_filtering,
     });
 
     // Forward request to Python FastAPI backend using axios with proper timeout
@@ -25,6 +28,8 @@ export async function POST(request: NextRequest) {
         keywords,
         companyName,
         max_articles: 10,
+        before_date,
+        enable_smart_filtering,
       },
       {
         timeout: 1800000, // 30 minutes
