@@ -41,8 +41,64 @@
       },
       "size_bytes": 272027,
       "record_count": 22
+    },
+    {
+      "id": 4,
+      "filename": "company_20260203_103202.json",
+      "filepath": "dumps\\company_20260203_103202.json",
+      "timestamp": "2026-02-03T10:32:02.274283",
+      "dump_type": "company",
+      "metadata": {
+        "mode": "COMPANY",
+        "manual_dump": true,
+        "company_name": "Exxonmobil"
+      },
+      "size_bytes": 237055,
+      "record_count": 17
+    },
+    {
+      "id": 5,
+      "filename": "company_20260203_103719.json",
+      "filepath": "dumps\\company_20260203_103719.json",
+      "timestamp": "2026-02-03T10:37:19.772338",
+      "dump_type": "company",
+      "metadata": {
+        "mode": "COMPANY",
+        "manual_dump": true,
+        "company_name": "Exxonmobil"
+      },
+      "size_bytes": 240722,
+      "record_count": 17
+    },
+    {
+      "id": 6,
+      "filename": "company_20260203_140258.json",
+      "filepath": "dumps\\company_20260203_140258.json",
+      "timestamp": "2026-02-03T14:02:58.945160",
+      "dump_type": "company",
+      "metadata": {
+        "mode": "COMPANY",
+        "manual_dump": true,
+        "company_name": "Twelve Cupcakes"
+      },
+      "size_bytes": 278443,
+      "record_count": 22
+    },
+    {
+      "id": 7,
+      "filename": "company_20260203_160559.json",
+      "filepath": "dumps\\company_20260203_160559.json",
+      "timestamp": "2026-02-03T16:05:59.453319",
+      "dump_type": "company",
+      "metadata": {
+        "mode": "COMPANY",
+        "manual_dump": true,
+        "company_name": "Exxonmobil"
+      },
+      "size_bytes": 241411,
+      "record_count": 17
     }
   ],
-  "total_dumps": 3,
-  "last_dump": "2026-01-30T15:17:21.749600"
+  "total_dumps": 7,
+  "last_dump": "2026-02-03T16:05:59.453319"
 }

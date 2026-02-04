@@ -81,9 +81,35 @@ const SignalCard: React.FC<SignalCardProps> = ({ signal, onClick }) => {
             {signal.source_name}
           </span>
         </div>
-        <span className="text-[10px] font-mono text-slate-400">
-          {new Date(signal.ingestion_timestamp).toLocaleTimeString()}
-        </span>
+        <div className="flex flex-col items-end gap-0.5">
+          <span
+            className={`text-[10px] font-semibold px-2 py-0.5 rounded ${
+              (signal as any).published_date ||
+              signal.metadata?.publish_date ||
+              signal.metadata?.published_date
+                ? "text-blue-600 bg-blue-50"
+                : "text-slate-500 bg-slate-50"
+            }`}
+          >
+            <i className="fas fa-calendar-day mr-1"></i>
+            {(signal as any).published_date ||
+            signal.metadata?.publish_date ||
+            signal.metadata?.published_date
+              ? new Date(
+                  (signal as any).published_date ||
+                    signal.metadata?.publish_date ||
+                    signal.metadata?.published_date,
+                ).toLocaleDateString("en-SG", {
+                  year: "numeric",
+                  month: "short",
+                  day: "numeric",
+                })
+              : "Unknown"}
+          </span>
+          <span className="text-[10px] font-mono text-slate-400">
+            Scraped: {new Date(signal.ingestion_timestamp).toLocaleTimeString()}
+          </span>
+        </div>
       </div>
 
       <div className="p-5 flex-grow">
@@ -127,7 +153,12 @@ const SignalCard: React.FC<SignalCardProps> = ({ signal, onClick }) => {
         )}
 
         <p className="text-sm text-slate-600 line-clamp-3 mb-4 italic leading-relaxed">
-          &ldquo;{signal.extracted_text}&rdquo;
+          &ldquo;
+          {signal.extracted_text
+            .replace(/<[^>]*>/g, "")
+            .replace(/&nbsp;/g, " ")
+            .trim()}
+          &rdquo;
         </p>
 
         <div className="space-y-3">

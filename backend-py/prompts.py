@@ -272,19 +272,27 @@ Return ONLY a valid JSON object:
 Do not include markdown formatting. Return only the JSON object."""
 
 
-def get_workforce_relevance_prompt(title: str, first_paragraph: str) -> str:
+def get_workforce_relevance_prompt(title: str, first_paragraph: str, company_name: Optional[str] = None) -> str:
     """
     Prompt to check if a news article is relevant to workforce signals.
     
     Args:
         title: The article title
         first_paragraph: The first paragraph of the article
+        company_name: Optional company name for context-aware filtering
         
     Returns:
         A prompt string for the AI to determine workforce relevance
     """
+    company_context = f"""
+
+COMPANY CONTEXT:
+You are analyzing content for: "{company_name}"
+Any discussions about this specific company's business status, closures, performance, or prospects ARE workforce-relevant.
+""" if company_name else ""
+    
     return f"""You are an assistant helping to filter news articles for a workforce early-signal monitoring system.
-Your task is NOT to predict outcomes or analyse risks.
+Your task is NOT to predict outcomes or analyse risks.{company_context}
 
 Based ONLY on the article title and the first paragraph provided below:
 
@@ -308,15 +316,19 @@ INSTRUCTIONS:
    - labor disputes
    - business restructuring affecting staff
    - company financial troubles impacting jobs
+   - discussions about a specific company's business viability, closures, or performance (when company context provided)
+   - speculation about business failures or success affecting jobs
 
 3. The following topics are NOT workforce-related and should be excluded:
-   - food promotions or menu launches
-   - restaurant openings or reviews
+   - food promotions or menu launches (UNLESS discussing company closures/job impacts)
+   - restaurant openings or reviews (UNLESS discussing workforce changes)
    - lifestyle, entertainment, or human-interest stories
    - consumer trends without employment impact
    - product launches without workforce context
    - celebrity news or gossip
    - general business news without workforce implications
+   
+IMPORTANT: If a company name is provided in the context, ANY discussion about that company's business status, closure, or prospects IS workforce-relevant.
 
 4. If the article IS workforce-related, classify the sentiment:
    - WORKFORCE_NEGATIVE: job losses, closures, cost-cutting affecting workers

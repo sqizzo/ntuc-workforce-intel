@@ -13,7 +13,10 @@ import os
 from scrapers.financial_scraper import FinancialDataScraper
 from scrapers.news_scraper import NewsSearchScraper
 from scrapers.reddit_scraper import RedditScraper
+from scrapers.google_news_rss_scraper import GoogleNewsRSSScraper
 from json_dump_manager import JSONDumpManager
+from hypothesis_engine import HypothesisEngine
+from ai_service import AIService, WorkforceRelevanceFilter
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -40,6 +43,11 @@ dump_manager = JSONDumpManager(
     dump_dir=dump_settings.get('dump_directory', 'dumps')
 )
 
+# Initialize AI service and hypothesis engine
+ai_service = AIService()
+hypothesis_engine = HypothesisEngine(ai_service)
+relevance_filter = WorkforceRelevanceFilter(ai_service)
+
 # Create FastAPI app
 app = FastAPI(
     title="NTUC Workforce Intelligence Scraper API",
@@ -64,6 +72,7 @@ class ScraperMode(str, Enum):
     FINANCIAL = "FINANCIAL"
     NEWS = "NEWS"
     REDDIT = "REDDIT"
+    GOOGLE_NEWS = "GOOGLE_NEWS"
 
 
 class ScrapeRequest(BaseModel):
@@ -74,6 +83,8 @@ class ScrapeRequest(BaseModel):
     subreddit: Optional[str] = Field(default="singapore", description="Subreddit for Reddit scraping")
     max_articles: Optional[int] = Field(default=10, description="Maximum articles to scrape")
     auto_dump: Optional[bool] = Field(default=None, description="Automatically dump results to JSON")
+    before_date: Optional[str] = Field(default=None, description="Filter data before this date (YYYY-MM-DD format)")
+    enable_smart_filtering: Optional[bool] = Field(default=True, description="Enable AI-powered relevance filtering")
 
 
 class DumpRequest(BaseModel):
@@ -153,7 +164,7 @@ async def scrape_workforce_signals(request: ScrapeRequest):
             max_articles = request.max_articles or CONFIG.get('scraper_settings', {}).get('max_articles', 10)
             
             news_scraper = NewsSearchScraper(max_articles=max_articles, general_sources=general_sources)
-            signals = news_scraper.search_workforce_signals(request.keywords)
+            signals = news_scraper.search_workforce_signals(request.keywords, before_date=request.before_date)
             
         elif request.mode == ScraperMode.REDDIT:
             # Reddit scraping - search across multiple subreddits
@@ -165,12 +176,29 @@ async def scrape_workforce_signals(request: ScrapeRequest):
                 try:
                     subreddit_signals = reddit_scraper.search_workforce_signals(
                         subreddit=subreddit,
-                        keywords=request.keywords
+                        keywords=request.keywords,
+                        before_date=request.before_date
                     )
                     signals.extend(subreddit_signals)
                     logger.info(f"Found {len(subreddit_signals)} signals from r/{subreddit}")
                 except Exception as e:
                     logger.warning(f"Failed to scrape r/{subreddit}: {e}")
+            
+        elif request.mode == ScraperMode.GOOGLE_NEWS:
+            # Google News scraping - fetch headlines, dates, and source links via RSS
+            if not request.keywords and not request.companyName:
+                raise HTTPException(status_code=400, detail="Keywords or company name required for Google News mode")
+            
+            query = request.companyName if request.companyName else ' '.join(request.keywords)
+            # Get max_articles from request, config, or None (fetch all)
+            max_articles = request.max_articles if request.max_articles is not None else CONFIG.get('google_news_settings', {}).get('max_articles')
+            
+            google_news_scraper = GoogleNewsRSSScraper(max_articles=max_articles)
+            signals = google_news_scraper.search_workforce_signals(
+                query=query,
+                before_date=request.before_date
+            )
+            logger.info(f"Found {len(signals)} signals from Google News for '{query}'")
             
         elif request.mode == ScraperMode.COMPANY:
             # Company-specific scraping (combines all sources)
@@ -190,7 +218,7 @@ async def scrape_workforce_signals(request: ScrapeRequest):
             try:
                 company_sources = [s for s in CONFIG.get('company_search_sources', []) if s.get('enabled', True)]
                 news_scraper = NewsSearchScraper(max_articles=5, company_sources=company_sources)
-                news_signals = news_scraper.search_workforce_signals_company(request.companyName)
+                news_signals = news_scraper.search_workforce_signals_company(request.companyName, before_date=request.before_date)
                 signals.extend(news_signals)
             except Exception as e:
                 logger.warning(f"News scraping failed: {e}")
@@ -204,7 +232,8 @@ async def scrape_workforce_signals(request: ScrapeRequest):
                     try:
                         subreddit_signals = reddit_scraper.search_workforce_signals(
                             subreddit=subreddit,
-                            keywords=[request.companyName]
+                            keywords=[request.companyName],
+                            before_date=request.before_date
                         )
                         signals.extend(subreddit_signals)
                         logger.info(f"Found {len(subreddit_signals)} Reddit signals from r/{subreddit} for {request.companyName}")
@@ -212,6 +241,22 @@ async def scrape_workforce_signals(request: ScrapeRequest):
                         logger.warning(f"Failed to scrape r/{subreddit}: {sub_e}")
             except Exception as e:
                 logger.warning(f"Reddit scraping failed: {e}")
+            
+            # Add Google News scraping for more historical coverage via RSS
+            # Use oldest_only=30 to get historical data for hypothesis engine
+            try:
+                # Get max_articles from config (None = fetch all)
+                max_gnews = CONFIG.get('google_news_settings', {}).get('max_articles')
+                google_news_scraper = GoogleNewsRSSScraper(max_articles=max_gnews)
+                gnews_signals = google_news_scraper.search_workforce_signals(
+                    query=request.companyName,
+                    before_date=request.before_date,
+                    oldest_only=30  # Only use 30 oldest articles for hypothesis engine
+                )
+                signals.extend(gnews_signals)
+                logger.info(f"Found {len(gnews_signals)} oldest signals from Google News for {request.companyName}")
+            except Exception as e:
+                logger.warning(f"Google News scraping failed: {e}")
             
             # Extract actual workforce data from signals if we have them
             if financial_result and signals:
@@ -231,6 +276,37 @@ async def scrape_workforce_signals(request: ScrapeRequest):
                     logger.error(f"Workforce extraction failed: {e}", exc_info=True)
                     # Don't fail the entire request, just skip this enhancement
             
+            # Apply AI-powered relevance filtering for company mode signals
+            if signals and request.enable_smart_filtering:
+                logger.info(f"Applying AI relevance filtering to {len(signals)} company signals...")
+                filtered_signals = []
+                
+                for signal in signals:
+                    try:
+                        # Get title and content for relevance check
+                        title = signal.get('metadata', {}).get('title', '') or signal.get('post_title', '') or signal.get('extracted_text', '')[:100]
+                        content = signal.get('extracted_text', '') or signal.get('post_text', '')
+                        
+                        # Check relevance WITH company context
+                        relevance_result = relevance_filter.check_relevance(title, content[:500], company_name=request.companyName)
+                        
+                        # Add relevance info to signal
+                        signal['relevance'] = relevance_result
+                        
+                        # Only keep relevant signals
+                        if relevance_result.get('is_relevant', False):
+                            filtered_signals.append(signal)
+                        else:
+                            logger.info(f"Filtered out irrelevant signal: {title[:50]}... - {relevance_result.get('rationale', 'No reason')[:50]}")
+                            
+                    except Exception as e:
+                        logger.warning(f"Error filtering signal: {e}, keeping signal by default")
+                        filtered_signals.append(signal)
+                
+                original_count = len(signals)
+                signals = filtered_signals
+                logger.info(f"Relevance filtering complete: {original_count} -> {len(signals)} signals (filtered out {original_count - len(signals)})")
+            
             # If we have financial data, return the full structure
             if financial_result:
                 financial_result['signals'] = signals  # Include all signals
@@ -249,7 +325,7 @@ async def scrape_workforce_signals(request: ScrapeRequest):
             # News scraping with general sources
             try:
                 news_scraper = NewsSearchScraper(max_articles=max_articles, general_sources=general_sources)
-                news_signals = news_scraper.search_workforce_signals(request.keywords)
+                news_signals = news_scraper.search_workforce_signals(request.keywords, before_date=request.before_date)
                 signals.extend(news_signals)
             except Exception as e:
                 logger.warning(f"News scraping failed: {e}")
@@ -258,13 +334,45 @@ async def scrape_workforce_signals(request: ScrapeRequest):
             try:
                 reddit_scraper = RedditScraper()
                 reddit_signals = reddit_scraper.search_workforce_signals(
-                    keywords=request.keywords
+                    keywords=request.keywords,
+                    before_date=request.before_date
                 )
                 signals.extend(reddit_signals)
             except Exception as e:
                 logger.warning(f"Reddit scraping failed: {e}")
         
         logger.info(f"Successfully scraped {len(signals)} signals")
+        
+        # Apply AI-powered relevance filtering
+        if signals and request.enable_smart_filtering:
+            logger.info(f"Applying AI relevance filtering to {len(signals)} signals...")
+            filtered_signals = []
+            
+            for signal in signals:
+                try:
+                    # Get title and content for relevance check
+                    title = signal.get('metadata', {}).get('title', '') or signal.get('post_title', '') or signal.get('extracted_text', '')[:100]
+                    content = signal.get('extracted_text', '') or signal.get('post_text', '')
+                    
+                    # Check relevance (no company context for general mode)
+                    relevance_result = relevance_filter.check_relevance(title, content[:500], company_name=None)
+                    
+                    # Add relevance info to signal
+                    signal['relevance'] = relevance_result
+                    
+                    # Only keep relevant signals
+                    if relevance_result.get('is_relevant', False):
+                        filtered_signals.append(signal)
+                    else:
+                        logger.info(f"Filtered out irrelevant signal: {title[:50]}... - {relevance_result.get('rationale', 'No reason')[:50]}")
+                        
+                except Exception as e:
+                    logger.warning(f"Error filtering signal: {e}, keeping signal by default")
+                    filtered_signals.append(signal)
+            
+            original_count = len(signals)
+            signals = filtered_signals
+            logger.info(f"Relevance filtering complete: {original_count} -> {len(signals)} signals (filtered out {original_count - len(signals)})")
         
         # Auto-dump if enabled
         auto_dump = request.auto_dump if request.auto_dump is not None else CONFIG.get('json_dump_settings', {}).get('auto_dump', False)
@@ -709,6 +817,129 @@ async def load_dump(filename: str):
         raise
     except Exception as e:
         logger.error(f"Error loading dump: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+class HypothesisAnalysisRequest(BaseModel):
+    """Request model for hypothesis analysis"""
+    company_name: str = Field(..., description="Name of the company to analyze")
+    signals: Optional[List[Dict[str, Any]]] = Field(None, description="Signals data from scraping")
+    financial_data: Optional[Dict[str, Any]] = Field(None, description="Financial data from scraping")
+    dump_filename: Optional[str] = Field(None, description="Specific dump file to analyze (legacy)")
+
+
+@app.post("/api/hypothesis/analyze")
+async def analyze_hypothesis(request: HypothesisAnalysisRequest):
+    """
+    Generate risk hypothesis analysis for a company based on available data.
+    Data can be provided directly (signals, financial_data) or loaded from dump file.
+    """
+    try:
+        logger.info(f"Starting hypothesis analysis for: {request.company_name}")
+        
+        # Load data for analysis
+        news_signals = []
+        social_signals = []
+        financial_data = None
+        
+        # Priority 1: Use provided signals and financial data directly
+        if request.signals is not None:
+            logger.info(f"Using provided signals data ({len(request.signals)} signals)")
+            for signal in request.signals:
+                source_type = signal.get('source_type', '').lower()
+                # Include news, blog, and google_news as news signals
+                if source_type in ['news', 'blog', 'google_news']:
+                    news_signals.append(signal)
+                elif source_type in ['social', 'forum', 'reddit']:
+                    social_signals.append(signal)
+            
+            if request.financial_data:
+                financial_data = request.financial_data
+                logger.info("Using provided financial data")
+        
+        # Priority 2: Load from specific dump file
+        elif request.dump_filename:
+            logger.info(f"Loading data from dump file: {request.dump_filename}")
+            dump_dir = dump_settings.get('dump_directory', 'dumps')
+            dump_path = os.path.join(os.path.dirname(__file__), dump_dir)
+            file_path = os.path.join(dump_path, request.dump_filename)
+            
+            if os.path.exists(file_path):
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    dump_data = json.load(f)
+                
+                # Extract signals from dump
+                signals = dump_data.get('signals', [])
+                for signal in signals:
+                    source_type = signal.get('source_type', '').lower()
+                    # Include news, blog, and google_news as news signals
+                    if source_type in ['news', 'blog', 'google_news']:
+                        news_signals.append(signal)
+                    elif source_type in ['social', 'forum', 'reddit']:
+                        social_signals.append(signal)
+                
+                # Extract financial data if available
+                financial_data = dump_data.get('financial_data')
+        
+        # Priority 3: Search dump files by company name (legacy fallback)
+        else:
+            logger.info(f"Searching dump files for company: {request.company_name}")
+            dump_dir = dump_settings.get('dump_directory', 'dumps')
+            dump_path = os.path.join(os.path.dirname(__file__), dump_dir)
+            
+            if os.path.exists(dump_path):
+                for filename in os.listdir(dump_path):
+                    if filename.endswith('.json') and filename != '_dump_checklist.json':
+                        file_path = os.path.join(dump_path, filename)
+                        try:
+                            with open(file_path, 'r', encoding='utf-8') as f:
+                                dump_data = json.load(f)
+                            
+                            # Check if this dump is for the requested company
+                            dump_company = dump_data.get('company_name', '').lower()
+                            search_company = request.company_name.lower()
+                            
+                            # Match if company name is in the dump's company_name field
+                            if search_company in dump_company or dump_company in search_company:
+                                # Extract signals
+                                signals = dump_data.get('signals', [])
+                                for signal in signals:
+                                    source_type = signal.get('source_type', '').lower()
+                                    # Include news, blog, and google_news as news signals
+                                    if source_type in ['news', 'blog', 'google_news']:
+                                        news_signals.append(signal)
+                                    elif source_type in ['social', 'forum', 'reddit']:
+                                        social_signals.append(signal)
+                                
+                                # Get financial data
+                                if not financial_data and dump_data.get('financial_data'):
+                                    financial_data = dump_data.get('financial_data')
+                                break  # Use the first matching dump
+                        except Exception as e:
+                            logger.warning(f"Error reading dump {filename}: {e}")
+                            continue
+        
+        if not news_signals and not social_signals:
+            raise HTTPException(
+                status_code=404,
+                detail=f"No data found for company: {request.company_name}"
+            )
+        
+        # Perform hypothesis analysis
+        analysis_result = hypothesis_engine.analyze_company_risk(
+            company_name=request.company_name,
+            news_signals=news_signals,
+            social_signals=social_signals,
+            financial_data=financial_data
+        )
+        
+        logger.info(f"Hypothesis analysis completed for {request.company_name}")
+        return analysis_result
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error in hypothesis analysis: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

@@ -66,6 +66,10 @@ class AIService:
             logger.info(f"Anthropic service initialized with model: {self.model}")
         except ImportError:
             raise ImportError("anthropic package not installed. Run: pip install anthropic")
+        
+    # TODO: USE MLAPI BY ELICE
+    # def _init_mlapi(self):
+    #     import mlapi
     
     def query(self, prompt: str, temperature: float = 0.3, max_tokens: int = 1000) -> str:
         """
@@ -384,20 +388,21 @@ class WorkforceRelevanceFilter:
         """
         self.ai_service = ai_service or AIService()
     
-    def check_relevance(self, title: str, first_paragraph: str) -> Dict[str, Any]:
+    def check_relevance(self, title: str, first_paragraph: str, company_name: Optional[str] = None) -> Dict[str, Any]:
         """
         Check if a news article is relevant to workforce signals
         
         Args:
             title: Article title
             first_paragraph: First paragraph of the article
+            company_name: Optional company name for context (company-specific scraping)
             
         Returns:
             Dictionary with relevance information
         """
         from prompts import get_workforce_relevance_prompt
         
-        prompt = get_workforce_relevance_prompt(title, first_paragraph)
+        prompt = get_workforce_relevance_prompt(title, first_paragraph, company_name)
         
         try:
             response = self.ai_service.query(prompt, temperature=0.3, max_tokens=300)

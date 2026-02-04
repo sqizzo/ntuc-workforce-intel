@@ -145,7 +145,46 @@ class NewsSearchScraper:
             article_data = self.driver.execute_script("""
                 let title = document.querySelector('h1')?.textContent.trim() || '';
                 let author = document.querySelector('[rel="author"], .author, .byline')?.textContent.trim() || '';
-                let date = document.querySelector('time, .date, .publish-date')?.textContent.trim() || '';
+                
+                // Enhanced date extraction with multiple strategies
+                let date = '';
+                
+                // Strategy 1: Look for time element with datetime attribute
+                let timeEl = document.querySelector('time[datetime]');
+                if (timeEl && timeEl.getAttribute('datetime')) {
+                    date = timeEl.getAttribute('datetime');
+                } 
+                // Strategy 2: Look for common date containers
+                else {
+                    let dateSelectors = [
+                        'time',
+                        '.date',
+                        '.publish-date',
+                        '.published-date',
+                        '.article-publish-date',
+                        '[class*="publish"]',
+                        '[class*="date"]',
+                        '[class*="timestamp"]'
+                    ];
+                    
+                    for (let selector of dateSelectors) {
+                        let el = document.querySelector(selector);
+                        if (el && el.textContent.trim()) {
+                            date = el.textContent.trim();
+                            break;
+                        }
+                    }
+                }
+                
+                // Strategy 3: Look for meta tags
+                if (!date) {
+                    let metaDate = document.querySelector('meta[property="article:published_time"]') || 
+                                   document.querySelector('meta[name="publish-date"]') ||
+                                   document.querySelector('meta[name="date"]');
+                    if (metaDate) {
+                        date = metaDate.getAttribute('content') || '';
+                    }
+                }
                 
                 let contentSelectors = [
                     'article',
@@ -231,7 +270,8 @@ class NewsSearchScraper:
     def search_workforce_signals(
         self, 
         keywords: List[str],
-        search_engine: str = "google"
+        search_engine: str = "google",
+        before_date: Optional[str] = None
     ) -> List[Dict[str, Any]]:
         """
         Search for workforce-related news articles
@@ -239,6 +279,7 @@ class NewsSearchScraper:
         Args:
             keywords: List of keywords to search for
             search_engine: Search engine to use (google, bing, etc.)
+            before_date: Filter articles before this date (YYYY-MM-DD)
             
         Returns:
             List of workforce signals from news articles
@@ -273,6 +314,13 @@ class NewsSearchScraper:
                     article = self.scrape_article_content(article_link['url'])
                     
                     if article:
+                        # Filter by date if specified
+                        if before_date and article.get('date'):
+                            article_date = self._parse_date(article['date'])
+                            filter_date = self._parse_date(before_date)
+                            if article_date and filter_date and article_date >= filter_date:
+                                continue  # Skip articles on or after the filter date
+                        
                         # Find matched keywords
                         matched = [kw for kw in keywords if kw.lower() in article['content'].lower()]
                         
@@ -302,12 +350,13 @@ class NewsSearchScraper:
         
         return signals
     
-    def search_workforce_signals_company(self, company_name: str) -> List[Dict[str, Any]]:
+    def search_workforce_signals_company(self, company_name: str, before_date: Optional[str] = None) -> List[Dict[str, Any]]:
         """
         Search for company-specific news using configured search URLs
         
         Args:
             company_name: Name of the company to search for
+            before_date: Filter articles before this date (YYYY-MM-DD)
             
         Returns:
             List of workforce signals from company-specific searches
@@ -335,6 +384,13 @@ class NewsSearchScraper:
                         article = self.scrape_article_content(article_link['url'])
                         
                         if article:
+                            # Filter by date if specified
+                            if before_date and article.get('date'):
+                                article_date = self._parse_date(article['date'])
+                                filter_date = self._parse_date(before_date)
+                                if article_date and filter_date and article_date >= filter_date:
+                                    continue  # Skip articles on or after the filter date
+                            
                             signals.append({
                                 'id': f'signal-company-{int(time.time())}-{idx}-{article_idx}',
                                 'source_type': 'news',
@@ -384,3 +440,54 @@ class NewsSearchScraper:
             return 'Organizational Change'
         else:
             return 'General Workforce Trend'
+    
+    def _parse_date(self, date_str: str) -> Optional[datetime]:
+        """
+        Parse date string to datetime object
+        
+        Args:
+            date_str: Date string in various formats
+            
+        Returns:
+            datetime object or None if parsing fails
+        """
+        if not date_str:
+            return None
+        
+        # Clean the date string
+        date_str = date_str.strip()
+        
+        # Try ISO format first (from datetime attributes)
+        try:
+            # Handle ISO 8601 with timezone
+            if 'T' in date_str:
+                # Remove timezone info for parsing
+                date_str_clean = date_str.split('+')[0].split('Z')[0].split('.')[0]
+                return datetime.strptime(date_str_clean, '%Y-%m-%dT%H:%M:%S')
+        except ValueError:
+            pass
+        
+        # Common date formats to try
+        formats = [
+            '%Y-%m-%d',
+            '%Y/%m/%d',
+            '%d-%m-%Y',
+            '%d/%m/%Y',
+            '%B %d, %Y',
+            '%b %d, %Y',
+            '%d %B %Y',
+            '%d %b %Y',
+            '%Y-%m-%d %H:%M:%S',
+            '%d %B %Y, %I:%M %p',
+            '%b %d, %Y, %I:%M %p'
+        ]
+        
+        for fmt in formats:
+            try:
+                return datetime.strptime(date_str, fmt)
+            except ValueError:
+                continue
+        
+        # If all formats fail, return None
+        return None
+

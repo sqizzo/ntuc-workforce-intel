@@ -8,7 +8,14 @@ import NewsSourcesManager from "@/components/NewsSourcesManager";
 import FinancialChart from "@/components/FinancialChart";
 import AIInsights from "@/components/AIInsights";
 import JSONDumpManager from "@/components/JSONDumpManager";
-import { ScraperMode, WorkforceSignal, FinancialData } from "@/types";
+import {
+  ScraperMode,
+  WorkforceSignal,
+  FinancialData,
+  HypothesisAnalysis,
+  PrimarySignal,
+  SupportingSignal,
+} from "@/types";
 import {
   BarChart,
   Bar,
@@ -38,6 +45,8 @@ export default function Home() {
   const [keywords, setKeywords] = useState<string[]>(INITIAL_KEYWORDS);
   const [newKeyword, setNewKeyword] = useState("");
   const [companyName, setCompanyName] = useState("");
+  const [beforeDate, setBeforeDate] = useState("");
+  const [enableSmartFiltering, setEnableSmartFiltering] = useState(true);
   const [signals, setSignals] = useState<WorkforceSignal[]>([]);
   const [financialData, setFinancialData] = useState<FinancialData | null>(
     null,
@@ -49,6 +58,11 @@ export default function Home() {
     null,
   );
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [hypothesisAnalysis, setHypothesisAnalysis] =
+    useState<HypothesisAnalysis | null>(null);
+  const [hypothesisLoading, setHypothesisLoading] = useState(false);
+  const [selectedPrimarySignal, setSelectedPrimarySignal] =
+    useState<PrimarySignal | null>(null);
 
   const handleAddKeyword = (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,6 +74,44 @@ export default function Home() {
 
   const removeKeyword = (kw: string) => {
     setKeywords(keywords.filter((k) => k !== kw));
+  };
+
+  const runHypothesisAnalysis = async (
+    company: string,
+    signalsData?: any[],
+    financialInfo?: any,
+  ) => {
+    if (!company) return;
+
+    setHypothesisLoading(true);
+    try {
+      const backendUrl =
+        process.env.NEXT_PUBLIC_PYTHON_BACKEND_URL || "http://localhost:8000";
+      const response = await fetch(`${backendUrl}/api/hypothesis/analyze`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          company_name: company,
+          signals: signalsData,
+          financial_data: financialInfo,
+        }),
+      });
+
+      if (response.ok) {
+        const analysis: HypothesisAnalysis = await response.json();
+        setHypothesisAnalysis(analysis);
+      } else {
+        console.log("Hypothesis analysis not available for this company");
+        setHypothesisAnalysis(null);
+      }
+    } catch (error) {
+      console.error("Error running hypothesis analysis:", error);
+      setHypothesisAnalysis(null);
+    } finally {
+      setHypothesisLoading(false);
+    }
   };
 
   const handleScrape = async () => {
@@ -87,6 +139,8 @@ export default function Home() {
           mode,
           keywords: mode === ScraperMode.GENERAL ? keywords : undefined,
           companyName: mode === ScraperMode.COMPANY ? companyName : undefined,
+          before_date: beforeDate || undefined,
+          enable_smart_filtering: enableSmartFiltering,
         }),
       });
 
@@ -100,6 +154,14 @@ export default function Home() {
       if (mode === ScraperMode.COMPANY && results.financial_data) {
         setFinancialData(results);
         setSignals(results.signals || []);
+        // Auto-run hypothesis analysis for company mode with the scraped data
+        if (companyName) {
+          runHypothesisAnalysis(
+            companyName,
+            results.signals,
+            results.financial_data,
+          );
+        }
       } else {
         setSignals(results);
       }
@@ -152,6 +214,122 @@ export default function Home() {
   }, [signals]);
 
   const COLORS = ["#ef4444", "#3b82f6", "#10b981", "#f59e0b", "#8b5cf6"];
+
+  const getRiskColor = (risk: string) => {
+    switch (risk) {
+      case "high":
+        return "text-red-600 bg-red-100 border-red-300";
+      case "medium":
+        return "text-yellow-600 bg-yellow-100 border-yellow-300";
+      case "low":
+        return "text-green-600 bg-green-100 border-green-300";
+      default:
+        return "text-gray-600 bg-gray-100 border-gray-300";
+    }
+  };
+
+  const getRiskLevelColor = (level: string) => {
+    switch (level) {
+      case "catastrophic":
+        return "text-red-900 bg-red-200 border-red-500";
+      case "severe":
+        return "text-red-700 bg-red-100 border-red-400";
+      case "high":
+        return "text-orange-700 bg-orange-100 border-orange-400";
+      case "moderate":
+        return "text-yellow-700 bg-yellow-100 border-yellow-400";
+      case "low":
+        return "text-green-700 bg-green-100 border-green-400";
+      case "minimal":
+        return "text-blue-700 bg-blue-100 border-blue-400";
+      default:
+        return "text-gray-600 bg-gray-100 border-gray-300";
+    }
+  };
+
+  const getRiskScoreColor = (score: number) => {
+    if (score >= 80) return "text-red-700 font-bold";
+    if (score >= 60) return "text-orange-700 font-bold";
+    if (score >= 40) return "text-yellow-700 font-semibold";
+    if (score >= 20) return "text-green-700 font-semibold";
+    return "text-blue-700";
+  };
+
+  const getSupportingSignals = (
+    primarySignal: PrimarySignal,
+  ): SupportingSignal[] => {
+    if (!hypothesisAnalysis) return [];
+    return hypothesisAnalysis.supporting_signals.filter((ss) =>
+      primarySignal.supporting_signal_ids.includes(ss.id),
+    );
+  };
+
+  const renderSourceDistribution = (distribution: {
+    News: number;
+    Social: number;
+    Financial: number;
+  }) => {
+    const total =
+      distribution.News + distribution.Social + distribution.Financial;
+    if (total === 0) return null;
+
+    const newsPercent = (distribution.News / total) * 100;
+    const socialPercent = (distribution.Social / total) * 100;
+    const financialPercent = (distribution.Financial / total) * 100;
+
+    return (
+      <div className="mt-3">
+        <p className="text-xs font-medium text-gray-700 mb-2">
+          Source Distribution:
+        </p>
+        <div className="w-full h-5 flex rounded-lg overflow-hidden">
+          {newsPercent > 0 && (
+            <div
+              className="bg-blue-500 flex items-center justify-center text-xs text-white font-medium"
+              style={{ width: `${newsPercent}%` }}
+              title={`News: ${distribution.News}`}
+            >
+              {newsPercent > 15 && `News ${distribution.News}`}
+            </div>
+          )}
+          {socialPercent > 0 && (
+            <div
+              className="bg-purple-500 flex items-center justify-center text-xs text-white font-medium"
+              style={{ width: `${socialPercent}%` }}
+              title={`Social: ${distribution.Social}`}
+            >
+              {socialPercent > 15 && `Social ${distribution.Social}`}
+            </div>
+          )}
+          {financialPercent > 0 && (
+            <div
+              className="bg-green-500 flex items-center justify-center text-xs text-white font-medium"
+              style={{ width: `${financialPercent}%` }}
+              title={`Financial: ${distribution.Financial}`}
+            >
+              {financialPercent > 15 && `Financial ${distribution.Financial}`}
+            </div>
+          )}
+        </div>
+        <div className="flex gap-3 mt-2 text-xs">
+          <div className="flex items-center gap-1">
+            <div className="w-2 h-2 bg-blue-500 rounded"></div>
+            <span>News ({distribution.News})</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <div className="w-2 h-2 bg-purple-500 rounded"></div>
+            <span>Social ({distribution.Social})</span>
+          </div>
+          {distribution.Financial > 0 && (
+            <div className="flex items-center gap-1">
+              <div className="w-2 h-2 bg-green-500 rounded"></div>
+              <span>Financial ({distribution.Financial})</span>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -234,6 +412,48 @@ export default function Home() {
                   * Scraper will look for external mentions and public
                   announcements linked to this entity.
                 </p>
+
+                <label className="block text-sm font-bold text-slate-700 mt-4">
+                  Filter by Date (Optional)
+                </label>
+                <input
+                  type="date"
+                  value={beforeDate}
+                  onChange={(e) => setBeforeDate(e.target.value)}
+                  className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all"
+                />
+                <p className="text-xs text-slate-500 italic">
+                  * Only show data published BEFORE this date (leave empty for
+                  all dates)
+                </p>
+
+                <label className="block text-sm font-bold text-slate-700 mt-4">
+                  AI Smart Filtering
+                </label>
+                <div className="flex items-center justify-between bg-slate-50 p-3 rounded-lg border border-slate-200">
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-slate-700">
+                      Enable AI relevance filtering
+                    </p>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Filter out non-workforce related content
+                    </p>
+                  </div>
+                  <button
+                    onClick={() =>
+                      setEnableSmartFiltering(!enableSmartFiltering)
+                    }
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                      enableSmartFiltering ? "bg-blue-600" : "bg-slate-300"
+                    }`}
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        enableSmartFiltering ? "translate-x-6" : "translate-x-1"
+                      }`}
+                    />
+                  </button>
+                </div>
               </div>
             )}
 
@@ -401,6 +621,185 @@ export default function Home() {
                     </div>
                   </div>
 
+                  {/* Hypothesis Analysis Loading State */}
+                  {hypothesisLoading && (
+                    <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+                      <div className="flex items-center justify-center py-8">
+                        <div className="text-center">
+                          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                          <p className="text-gray-600">
+                            Analyzing risk signals with AI...
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Hypothesis Analysis - Overall Risk Assessment & Major Hypothesis */}
+                  {hypothesisAnalysis && !hypothesisLoading && (
+                    <>
+                      {/* Overall Risk Assessment - Featured Section */}
+                      <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+                        <div className="flex items-center justify-between mb-6">
+                          <div className="flex items-center gap-3">
+                            <i className="fas fa-exclamation-triangle text-slate-600 text-lg"></i>
+                            <h3 className="text-xl font-bold text-slate-900">
+                              Overall Risk Assessment
+                            </h3>
+                          </div>
+                          <div
+                            className={`px-4 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider border ${getRiskLevelColor(hypothesisAnalysis.overall_risk_score.level)}`}
+                          >
+                            {hypothesisAnalysis.overall_risk_score.level
+                              .toUpperCase()
+                              .replace("_", " ")}
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                          <div>
+                            <p className="text-xs text-slate-500 mb-1">
+                              Risk Score
+                            </p>
+                            <p
+                              className={`text-3xl font-bold ${getRiskScoreColor(hypothesisAnalysis.overall_risk_score.score)}`}
+                            >
+                              {hypothesisAnalysis.overall_risk_score.score}
+                              <span className="text-lg text-slate-400 font-normal">
+                                /100
+                              </span>
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-slate-500 mb-1">
+                              Confidence Level
+                            </p>
+                            <p className="text-xl font-bold text-slate-900 uppercase">
+                              {hypothesisAnalysis.overall_risk_score.confidence.replace(
+                                "_",
+                                " ",
+                              )}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-slate-500 mb-1">
+                              Target Entity
+                            </p>
+                            <p className="text-lg font-bold text-slate-900 truncate">
+                              {hypothesisAnalysis.company_name}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="border-t border-slate-200 pt-4">
+                          <h4 className="text-xs font-bold text-slate-600 mb-2 flex items-center">
+                            <i className="fas fa-brain mr-2 text-blue-600"></i>
+                            AI Risk Analysis
+                          </h4>
+                          <p className="text-sm text-slate-700 leading-relaxed">
+                            {hypothesisAnalysis.overall_risk_score.reasoning}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Major Hypothesis - Key Insight */}
+                      <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+                        <div className="flex items-center gap-3 mb-4">
+                          <i className="fas fa-file-alt text-slate-600 text-lg"></i>
+                          <h3 className="text-xl font-bold text-slate-900">
+                            Major Hypothesis
+                          </h3>
+                        </div>
+                        <p className="text-sm text-slate-700 leading-relaxed">
+                          {hypothesisAnalysis.major_hypothesis}
+                        </p>
+                      </div>
+
+                      {/* Primary Signals */}
+                      {hypothesisAnalysis.primary_signals.length > 0 && (
+                        <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+                          <div className="flex items-center gap-3 mb-6">
+                            <i className="fas fa-signal text-slate-600 text-lg"></i>
+                            <h3 className="text-xl font-bold text-slate-900">
+                              Primary Risk Signals
+                            </h3>
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {hypothesisAnalysis.primary_signals.map(
+                              (primarySignal) => (
+                                <div
+                                  key={primarySignal.id}
+                                  className="border border-slate-200 rounded-xl p-4 hover:shadow-md hover:border-slate-300 transition-all cursor-pointer"
+                                  onClick={() =>
+                                    setSelectedPrimarySignal(primarySignal)
+                                  }
+                                >
+                                  <div className="flex justify-between items-start mb-3">
+                                    <div className="flex-1">
+                                      <h4 className="font-bold text-base text-slate-900 mb-2">
+                                        {primarySignal.title}
+                                      </h4>
+                                      <div className="flex items-center gap-3">
+                                        <span
+                                          className={`text-2xl font-bold ${getRiskScoreColor(primarySignal.risk_score)}`}
+                                        >
+                                          {primarySignal.risk_score}
+                                        </span>
+                                        <span
+                                          className={`px-2 py-1 rounded-lg text-xs font-bold uppercase ${getRiskColor(
+                                            primarySignal.risk_level,
+                                          )}`}
+                                        >
+                                          {primarySignal.risk_level.toUpperCase()}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <p className="text-xs text-slate-600 mb-3 leading-relaxed">
+                                    {primarySignal.description}
+                                  </p>
+                                  <div className="border-t border-slate-200 pt-3 mb-3">
+                                    <p className="text-[10px] font-bold text-slate-500 mb-1 uppercase">
+                                      Risk Analysis
+                                    </p>
+                                    <p className="text-xs text-slate-700">
+                                      {primarySignal.risk_reasoning}
+                                    </p>
+                                  </div>
+                                  <div className="mb-3">
+                                    <p className="text-[10px] font-bold text-slate-500 mb-2 uppercase">
+                                      Key Indicators
+                                    </p>
+                                    <div className="flex flex-wrap gap-1">
+                                      {primarySignal.key_indicators.map(
+                                        (indicator, idx) => (
+                                          <span
+                                            key={idx}
+                                            className="px-2 py-1 bg-slate-100 text-slate-700 rounded text-[10px] font-medium"
+                                          >
+                                            {indicator}
+                                          </span>
+                                        ),
+                                      )}
+                                    </div>
+                                  </div>
+                                  {renderSourceDistribution(
+                                    primarySignal.source_distribution,
+                                  )}
+                                  <button className="mt-3 text-xs text-blue-600 hover:text-blue-800 font-medium">
+                                    View{" "}
+                                    {primarySignal.supporting_signal_ids.length}{" "}
+                                    Supporting Signals →
+                                  </button>
+                                </div>
+                              ),
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )}
+
                   {/* Financial Chart */}
                   {financialData.financial_data.history_data &&
                     financialData.financial_data.history_data.length > 0 && (
@@ -510,6 +909,101 @@ export default function Home() {
           setSelectedSignal(null);
         }}
       />
+
+      {/* Supporting Signals Modal */}
+      {selectedPrimarySignal && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+          onClick={() => setSelectedPrimarySignal(null)}
+        >
+          <div
+            className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="sticky top-0 bg-white border-b border-gray-200 p-6 z-10">
+              <div className="flex justify-between items-start">
+                <div>
+                  <h3 className="text-2xl font-bold text-gray-800">
+                    {selectedPrimarySignal.title}
+                  </h3>
+                  <p className="text-gray-600 mt-1">
+                    {selectedPrimarySignal.description}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setSelectedPrimarySignal(null)}
+                  className="text-gray-500 hover:text-gray-700 text-2xl font-bold ml-4"
+                >
+                  ×
+                </button>
+              </div>
+              {renderSourceDistribution(
+                selectedPrimarySignal.source_distribution,
+              )}
+            </div>
+
+            <div className="p-6 space-y-4">
+              <h4 className="text-lg font-bold text-gray-800 mb-3">
+                Supporting Signals
+              </h4>
+              {getSupportingSignals(selectedPrimarySignal).map((signal) => (
+                <div
+                  key={signal.id}
+                  className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50"
+                >
+                  <div className="flex justify-between items-start mb-2">
+                    <div className="flex-1">
+                      <h5 className="font-semibold text-gray-800 mb-1">
+                        {signal.title}
+                      </h5>
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`text-2xl ${getRiskScoreColor(signal.risk_score)}`}
+                        >
+                          {signal.risk_score}
+                        </span>
+                        <span
+                          className={`px-2 py-1 rounded text-xs font-semibold ${getRiskColor(
+                            signal.severity,
+                          )}`}
+                        >
+                          {signal.severity}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex gap-4 text-xs text-gray-600 mb-2">
+                    <span className="flex items-center gap-1">
+                      <span className="font-medium">Source:</span>
+                      {signal.source_type}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <span className="font-medium">Timeframe:</span>
+                      {signal.timeframe}
+                    </span>
+                  </div>
+                  <div className="bg-blue-50 rounded p-3 mb-2 border border-blue-200">
+                    <p className="text-xs font-semibold text-gray-700 mb-1">
+                      AI Risk Analysis:
+                    </p>
+                    <p className="text-xs text-gray-700">
+                      {signal.risk_reasoning}
+                    </p>
+                  </div>
+                  <div className="mt-2">
+                    <p className="text-xs font-medium text-gray-700 mb-1">
+                      Evidence:
+                    </p>
+                    <p className="text-sm text-gray-700 bg-gray-50 p-3 rounded">
+                      {signal.evidence}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

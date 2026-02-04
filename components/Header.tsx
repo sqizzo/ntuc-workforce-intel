@@ -18,10 +18,16 @@ const Header: React.FC = () => {
         </div>
         <nav className="hidden md:flex items-center space-x-6">
           <a
-            href="#"
-            className="text-sm font-semibold text-blue-600 border-b-2 border-blue-600 pb-1"
+            href="/"
+            className="text-sm font-semibold text-slate-600 hover:text-blue-600 transition-colors"
           >
             Scraper
+          </a>
+          <a
+            href="/hypothesis"
+            className="text-sm font-semibold text-slate-600 hover:text-blue-600 transition-colors"
+          >
+            Risk Hypothesis
           </a>
           <a
             href="#"

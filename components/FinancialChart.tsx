@@ -233,15 +233,10 @@ const FinancialChart: React.FC<FinancialChartProps> = ({
               <div className="text-xs text-cyan-700 font-bold mb-2 uppercase tracking-wide flex items-center">
                 <i className="fas fa-users mr-1"></i>
                 Employees
-                {actualWorkforce && actualWorkforce.is_subsidiary_data && (
-                  <span className="ml-2 text-[10px] bg-cyan-200 text-cyan-800 px-1.5 py-0.5 rounded-full">
-                    ACTUAL
-                  </span>
-                )}
               </div>
               <div className="text-xl font-bold text-cyan-900">
                 {actualWorkforce && actualWorkforce.employee_count
-                  ? actualWorkforce.employee_count.toLocaleString()
+                  ? `~${actualWorkforce.employee_count.toLocaleString()}`
                   : summary.employees
                     ? summary.employees.toLocaleString()
                     : "N/A"}
@@ -254,11 +249,6 @@ const FinancialChart: React.FC<FinancialChartProps> = ({
                     Parent co: {summary.employees}
                   </div>
                 )}
-              {actualWorkforce && actualWorkforce.affected_workers && (
-                <div className="text-xs text-red-600 mt-1 font-semibold">
-                  {actualWorkforce.affected_workers} affected
-                </div>
-              )}
             </div>
 
             {/* Current Price */}
