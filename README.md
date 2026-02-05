@@ -415,43 +415,11 @@ This project is configured for production deployment as a **monorepo**:
    - Update `FRONTEND_URL` in Render with your Vercel URL
    - Both services auto-redeploy
 
-### Detailed Instructions
-
-See comprehensive deployment guides:
-
-- **[DEPLOYMENT.md](DEPLOYMENT.md)** - Complete step-by-step guide
-- **[DEPLOYMENT_QUICK_REF.md](DEPLOYMENT_QUICK_REF.md)** - Quick reference card
-
 ### Monitoring
 
 - **Backend Health**: `https://your-backend.onrender.com/health`
 - **API Docs**: `https://your-backend.onrender.com/docs`
 - **Frontend**: `https://your-project.vercel.app`
-
----
-
-## 🧪 Testing
-
-### Manual Testing Checklist
-
-- [ ] Company scraping (e.g., "Twelve Cupcakes")
-- [ ] Financial data fetching
-- [ ] News scraping (5 articles)
-- [ ] Google News RSS (30 oldest articles)
-- [ ] Reddit scraping
-- [ ] AI relevance filtering
-- [ ] Hypothesis engine (52 signals → 52 supporting signals)
-- [ ] Source distribution validation
-- [ ] JSON dump save/load
-- [ ] Interactive charts and visualizations
-
-### Debug Outputs
-
-The hypothesis engine creates debug JSON files in `backend-py/dumps/debug/`:
-
-- `supporting_signals.json` - All 52 supporting signals with URLs
-- `primary_signals.json` - Primary signal groupings
-- `assignment_analysis.json` - Signal assignment validation
 
 ---
 
@@ -599,44 +567,6 @@ The hypothesis engine creates debug JSON files in `backend-py/dumps/debug/`:
 - Update Next.js: `npm install next@latest react@latest react-dom@latest`
 - Check Node.js version: `node --version` (should be 18+)
 - Review build logs in Vercel dashboard for specific errors
-
----
-
-## 📚 Documentation
-
-Comprehensive documentation available in `backend-py/documents/`:
-
-- **[HYPOTHESIS_ENGINE.md](backend-py/documents/HYPOTHESIS_ENGINE.md)** - Hypothesis engine architecture
-- **[GOOGLE_NEWS_SCRAPER.md](backend-py/documents/GOOGLE_NEWS_SCRAPER.md)** - Google News RSS integration
-- **[JSON_DUMP_DOCUMENTATION.md](backend-py/documents/JSON_DUMP_DOCUMENTATION.md)** - Dump system guide
-- **[AI_INTEGRATION_README.md](backend-py/documents/AI_INTEGRATION_README.md)** - AI features overview
-- **[DEPLOYMENT.md](DEPLOYMENT.md)** - Production deployment guide
-
----
-
-## 🤝 Contributing
-
-This project is part of NTUC workforce intelligence initiative. For contributions:
-
-1. Create a feature branch: `git checkout -b feature/your-feature`
-2. Make changes and test thoroughly
-3. Commit with descriptive messages: `git commit -m "feat: add new feature"`
-4. Push and create a pull request
-
----
-
-## 📄 License
-
-This project is proprietary to NTUC / ELICE.
-
----
-
-## 🙏 Acknowledgments
-
-- OpenAI for GPT-4 API
-- Google News RSS for historical data access
-- yfinance for financial data
-- FastAPI and Next.js communities
 
 ---
 

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
 import {
   HypothesisAnalysis,
   PrimarySignal,
@@ -197,9 +198,9 @@ export default function HypothesisViewer({
           <strong>Note:</strong> This analysis requires existing company data
           from previous scraping. If no data is found, please scrape the company
           first using the{" "}
-          <a href="/" className="underline hover:text-blue-900 font-medium">
+          <Link href="/" className="underline hover:text-blue-900 font-medium">
             main scraper
-          </a>
+          </Link>
           .
         </div>
 
@@ -235,19 +236,19 @@ export default function HypothesisViewer({
                     <ol className="list-decimal ml-5 space-y-1">
                       <li>
                         Go to the{" "}
-                        <a
+                        <Link
                           href="/"
                           className="underline hover:text-red-800 font-medium"
                         >
                           main scraper page
-                        </a>
+                        </Link>
                       </li>
                       <li>
                         Select <strong>Company Mode</strong> or{" "}
                         <strong>Financial Mode</strong>
                       </li>
                       <li>Enter the company name or ticker symbol</li>
-                      <li>Click "Start Scraping" to collect data</li>
+                      <li>Click &quot;Start Scraping&quot; to collect data</li>
                       <li>Return here to run the hypothesis analysis</li>
                     </ol>
                   </div>
