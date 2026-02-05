@@ -5,6 +5,7 @@ Scrapes news articles from search results using Selenium
 import time
 import random
 import re
+import os
 from datetime import datetime
 from typing import List, Dict, Any, Optional
 from urllib.parse import urlparse, urljoin
@@ -42,6 +43,13 @@ class NewsSearchScraper:
         try:
             # Create completely fresh options object
             options = uc.ChromeOptions()
+            
+            # Detect Chrome binary location (for Render/cloud deployments)
+            chrome_bin = os.getenv('CHROME_BIN') or os.getenv('GOOGLE_CHROME_BIN')
+            if chrome_bin and os.path.exists(chrome_bin):
+                options.binary_location = chrome_bin
+                print(f"Using Chrome binary: {chrome_bin}")
+            
             options.add_argument("--headless=new")
             options.add_argument("--start-maximized")
             options.add_argument("--disable-blink-features=AutomationControlled")
@@ -62,6 +70,12 @@ class NewsSearchScraper:
             try:
                 # Fallback: let it auto-detect
                 options = uc.ChromeOptions()
+                
+                # Try to set Chrome binary again
+                chrome_bin = os.getenv('CHROME_BIN') or os.getenv('GOOGLE_CHROME_BIN')
+                if chrome_bin and os.path.exists(chrome_bin):
+                    options.binary_location = chrome_bin
+                
                 options.add_argument("--headless=new")
                 options.add_argument("--no-sandbox")
                 options.add_argument("--disable-dev-shm-usage")
