@@ -10,9 +10,15 @@ import json
 from datetime import datetime
 from typing import List, Dict, Any, Optional
 from urllib.parse import urlparse, quote_plus
-import undetected_chromedriver as uc
-from selenium.webdriver.common.by import By
-from selenium.common.exceptions import NoSuchElementException, TimeoutException
+
+# Optional Selenium imports (fallback only)
+try:
+    import undetected_chromedriver as uc
+    from selenium.webdriver.common.by import By
+    from selenium.common.exceptions import NoSuchElementException, TimeoutException
+    SELENIUM_AVAILABLE = True
+except ImportError:
+    SELENIUM_AVAILABLE = False
 
 
 class RedditScraper:
@@ -23,6 +29,10 @@ class RedditScraper:
         
     def setup_driver(self):
         """Setup undetected Chrome driver"""
+        if not SELENIUM_AVAILABLE:
+            print("⚠ Selenium not available, using JSON API only")
+            return
+            
         if self.driver:
             try:
                 # Test if driver is still alive
