@@ -9,9 +9,11 @@ from enum import Enum
 import logging
 import json
 import os
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
 
 from scrapers.financial_scraper import FinancialDataScraper
-from scrapers.news_scraper import NewsSearchScraper
+from scrapers.news_scraper_playwright import NewsSearchScraperPlaywright as NewsSearchScraper
 from scrapers.reddit_scraper import RedditScraper
 from scrapers.google_news_rss_scraper import GoogleNewsRSSScraper
 from json_dump_manager import JSONDumpManager
@@ -246,7 +248,16 @@ async def scrape_workforce_signals(request: ScrapeRequest):
             try:
                 company_sources = [s for s in CONFIG.get('company_search_sources', []) if s.get('enabled', True)]
                 news_scraper = NewsSearchScraper(max_articles=5, company_sources=company_sources)
-                news_signals = news_scraper.search_workforce_signals_company(request.companyName, before_date=request.before_date)
+                
+                # Run Playwright in a thread pool to avoid asyncio conflict
+                loop = asyncio.get_event_loop()
+                with ThreadPoolExecutor() as executor:
+                    news_signals = await loop.run_in_executor(
+                        executor,
+                        news_scraper.search_workforce_signals_company,
+                        request.companyName,
+                        request.before_date
+                    )
                 signals.extend(news_signals)
             except Exception as e:
                 logger.warning(f"News scraping failed: {e}")
