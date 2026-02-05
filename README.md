@@ -100,6 +100,26 @@ PYTHON_BACKEND_URL=http://localhost:8000
 
 Create `backend-py/.env` or `backend-py/config.json` with your OpenAI API key:
 
+```env
+PORT=8000
+FRONTEND_URL=http://localhost:3000,http://localhost:3001
+LOG_LEVEL=INFO
+
+# OpenAI API Configuration
+OPENAI_API_KEY=your-openai-api-key-here
+
+# Alternative: Anthropic Claude
+# ANTHROPIC_API_KEY=your-anthropic-api-key-here
+
+# AI Service Provider (openai, anthropic, or mock)
+AI_PROVIDER=openai
+
+# AI Model Configuration
+OPENAI_MODEL=gpt-4o-mini
+# ANTHROPIC_MODEL=claude-3-5-sonnet-20241022
+
+```
+
 ```json
 {
   "openai_api_key": "sk-your-api-key-here",
