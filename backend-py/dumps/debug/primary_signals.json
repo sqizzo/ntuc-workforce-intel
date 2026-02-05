@@ -5,12 +5,12 @@
     "description": "Concerns related to employee treatment, layoffs, and labor violations",
     "risk_level": "high",
     "supporting_signal_ids": [
+      "ss_1",
       "ss_2",
       "ss_3",
-      "ss_6",
       "ss_7",
       "ss_11",
-      "ss_52"
+      "ss_18"
     ],
     "key_indicators": [
       "Underpayment",
@@ -18,27 +18,27 @@
       "Union activity"
     ],
     "source_distribution": {
-      "News": 5,
-      "Social": 1,
+      "News": 6,
+      "Social": 0,
       "Financial": 0
     }
   },
   {
     "id": "ps_2",
     "title": "FINANCIAL DISTRESS",
-    "description": "Indications of financial instability, including debts and unpaid salaries",
+    "description": "Indications of financial instability, debt, and poor performance",
     "risk_level": "high",
     "supporting_signal_ids": [
       "ss_1",
       "ss_8",
-      "ss_10",
+      "ss_9",
       "ss_12",
-      "ss_18"
+      "ss_14"
     ],
     "key_indicators": [
-      "Debt levels",
-      "Unpaid salaries",
-      "Liquidation"
+      "Debt to creditors",
+      "Liquidation",
+      "Unpaid salaries"
     ],
     "source_distribution": {
       "News": 5,
@@ -55,8 +55,8 @@
       "ss_9",
       "ss_10",
       "ss_12",
-      "ss_49",
-      "ss_50"
+      "ss_48",
+      "ss_49"
     ],
     "key_indicators": [
       "Business closures",
@@ -71,19 +71,19 @@
   {
     "id": "ps_4",
     "title": "REGULATORY/LEGAL RISKS",
-    "description": "Legal issues, compliance failures, and regulatory investigations",
+    "description": "Legal challenges, compliance issues, and regulatory scrutiny",
     "risk_level": "high",
     "supporting_signal_ids": [
+      "ss_3",
       "ss_6",
       "ss_17",
       "ss_21",
-      "ss_24",
-      "ss_26"
+      "ss_24"
     ],
     "key_indicators": [
-      "Legal charges",
+      "Investigations",
       "Fines",
-      "Investigations"
+      "Legal charges"
     ],
     "source_distribution": {
       "News": 5,
@@ -94,39 +94,41 @@
   {
     "id": "ps_5",
     "title": "MARKET PERCEPTION",
-    "description": "Public sentiment and reputation concerns regarding the business",
+    "description": "Public sentiment and reputation concerns affecting the business",
     "risk_level": "medium",
     "supporting_signal_ids": [
       "ss_43",
       "ss_44",
-      "ss_48"
+      "ss_49",
+      "ss_50"
     ],
     "key_indicators": [
-      "Customer sentiment",
+      "Customer concerns",
       "Brand reputation"
     ],
     "source_distribution": {
       "News": 0,
-      "Social": 3,
+      "Social": 4,
       "Financial": 0
     }
   },
   {
     "id": "ps_6",
     "title": "STRATEGIC ANOMALIES",
-    "description": "Unusual management decisions and strategic missteps",
+    "description": "Management decisions and strategic issues impacting business viability",
     "risk_level": "medium",
     "supporting_signal_ids": [
+      "ss_14",
+      "ss_15",
       "ss_25",
-      "ss_39",
-      "ss_40"
+      "ss_39"
     ],
     "key_indicators": [
       "Management decisions",
-      "Strategic failures"
+      "Ownership changes"
     ],
     "source_distribution": {
-      "News": 3,
+      "News": 4,
       "Social": 0,
       "Financial": 0
     }
@@ -134,15 +136,15 @@
   {
     "id": "ps_7",
     "title": "INDUSTRY CHALLENGES",
-    "description": "Broader market and industry pressures affecting the business",
+    "description": "External factors affecting the industry and competitive landscape",
     "risk_level": "medium",
     "supporting_signal_ids": [
       "ss_4",
       "ss_5"
     ],
     "key_indicators": [
-      "Industry trends",
-      "Market competition"
+      "Market competition",
+      "Industry trends"
     ],
     "source_distribution": {
       "News": 2,

@@ -715,7 +715,7 @@ Respond with ONLY valid JSON, no markdown formatting."""
 SUPPORTING SIGNALS TO GROUP ({len(supporting_signals)} total):
 {signals_json}
 
-⚠️ MANDATORY REQUIREMENT - THIS IS CRITICAL:
+MANDATORY REQUIREMENT - THIS IS CRITICAL:
 YOU MUST ASSIGN EVERY SINGLE ONE OF THE {len(supporting_signals)} SUPPORTING SIGNALS.
 - Count them: there are {len(supporting_signals)} signals with IDs from ss_1 to ss_{len(supporting_signals)}
 - Your response MUST include all {len(supporting_signals)} signal IDs across all primary signals
@@ -723,9 +723,9 @@ YOU MUST ASSIGN EVERY SINGLE ONE OF THE {len(supporting_signals)} SUPPORTING SIG
 - You can assign 6-10 signals per primary signal if needed
 
 VERIFICATION CHECKLIST (complete before responding):
-□ Did I include ss_1 through ss_{len(supporting_signals)} in my response?
-□ Did I count the total IDs to ensure it equals {len(supporting_signals)}?
-□ Are any signals left unassigned?
+Did I include ss_1 through ss_{len(supporting_signals)} in my response?
+Did I count the total IDs to ensure it equals {len(supporting_signals)}?
+Are any signals left unassigned?
 
 TASK:
 Group these supporting signals into primary signal categories. Common categories include:
@@ -735,7 +735,8 @@ Group these supporting signals into primary signal categories. Common categories
 - REGULATORY/LEGAL RISKS (legal cases, fines, compliance issues)
 - MARKET PERCEPTION (reputation, customer concerns)
 - STRATEGIC ANOMALIES (management decisions, strategic issues)
-- INDUSTRY CHALLENGES
+- INDUSTRY CHALLENGES (market saturation, industry overcrowding, consumer trend shift)
+- PRODUCT & CUSTOMER EROSION (quality decline, product defect, disappointment, customer complaint)
 
 Return a JSON object with this structure:
 {{

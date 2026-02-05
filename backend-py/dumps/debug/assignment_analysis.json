@@ -1,34 +1,35 @@
 {
   "total_supporting_signals": 52,
-  "total_assigned": 26,
-  "total_unassigned": 26,
+  "total_assigned": 25,
+  "total_unassigned": 27,
   "unassigned_signal_ids": [
-    "ss_19",
-    "ss_22",
-    "ss_47",
-    "ss_14",
-    "ss_41",
-    "ss_28",
-    "ss_38",
-    "ss_45",
-    "ss_27",
+    "ss_13",
     "ss_51",
+    "ss_36",
+    "ss_22",
+    "ss_27",
+    "ss_47",
+    "ss_33",
+    "ss_32",
+    "ss_26",
+    "ss_16",
+    "ss_19",
+    "ss_38",
+    "ss_46",
+    "ss_23",
+    "ss_20",
+    "ss_29",
+    "ss_28",
+    "ss_45",
+    "ss_52",
+    "ss_37",
+    "ss_40",
     "ss_35",
     "ss_34",
-    "ss_46",
-    "ss_29",
-    "ss_15",
-    "ss_36",
-    "ss_16",
-    "ss_33",
-    "ss_37",
-    "ss_30",
-    "ss_13",
-    "ss_20",
-    "ss_23",
     "ss_31",
+    "ss_41",
     "ss_42",
-    "ss_32"
+    "ss_30"
   ],
   "unassigned_details": [
     {
@@ -38,24 +39,6 @@
       "timeframe": "2011",
       "evidence": "Twelve Cupcakes. Twelve Cupcakes  Miss Tam Chiak",
       "evidence_url": "https://news.google.com/rss/articles/CBMiWEFVX3lxTE1jRThUV0tvaTRmVEhxbzVkWEhjbUh6d0hPZU5EeHh0OTEwM3RTWUk2a29za2lBc0R0NkgwMEJ3VU9QOFo1OTYxYk1KSDdDM25Nd2Rzd1llMzA?oc=5",
-      "severity": "medium"
-    },
-    {
-      "id": "ss_14",
-      "title": "Twelve Cupcakes sold to Indian tea company for S$2.5 million",
-      "source_type": "google_news",
-      "timeframe": "2017",
-      "evidence": "Twelve Cupcakes sold to Indian tea company for S$2.5 million. Twelve Cupcakes sold to Indian tea company for S$2.5 million  todayonline.com",
-      "evidence_url": "https://news.google.com/rss/articles/CBMiggFBVV95cUxQTWk0TDIycHVzMjVIUTBOVnR5TjY4Rm52ZFdnMnhjenB4ZlJMaTdCbFZ4ZmJxUGxFN29LQnJCZmhyb1pmVUNXYnlQeFFIV1hGNGZZenhOQ0x6dWlqeDJVUWRndzlWZzRDUHpsVDI2MWZpX1BNd1ZvR0JGazNEeGs2RkJn?oc=5",
-      "severity": "medium"
-    },
-    {
-      "id": "ss_15",
-      "title": "Indian tea company buys over Twelve Cupcakes chain",
-      "source_type": "google_news",
-      "timeframe": "2017",
-      "evidence": "Indian tea company buys over Twelve Cupcakes chain. Indian tea company buys over Twelve Cupcakes chain  The Straits Times",
-      "evidence_url": "https://news.google.com/rss/articles/CBMimgFBVV95cUxNdFNYbzlKMVUwT191WUF6aWhrd0I1a3l6a0VDY3gxUmVpaTNWRW9wTXpFdk1Rc2JxTlJkLVh5akc2dXNnSHZVWGpvaXZiMUJsU2dHNG9EUkNZbko5dWZ3MW52NFNoVjIwOGpBOUZ1RndxbmVSRmh4ZjRLT0t1QWlCaTJVdS1XX2MtcU5LaVdLaENWSjhiOGE0dnBB?oc=5",
       "severity": "medium"
     },
     {
@@ -101,6 +84,15 @@
       "timeframe": "2020",
       "evidence": "Twelve Cupcakes founders Daniel Ong, Jaime Teo charged with underpaying foreign workers. Twelve Cupcakes founders Daniel Ong, Jaime Teo charged with underpaying foreign workers  todayonline.com",
       "evidence_url": "https://news.google.com/rss/articles/CBMiuwFBVV95cUxOTG1XMXJFeXpsMmFLbFR1UWFFbkJJOWlpQ0g1bHk3YmZEc0NjT2Y2UDdBYlByUm5COXQyRHRfb1NHOE9EX2pnSVBFUUlfM3pyczhFX1o3bjBTa3FNMUI5b2ZnVjBMYzNmNDFLdW1BNUN1eVZkaGRGaTlrblV6QUphRmY2ZmlJSDhFYkxnY1VHTlVZM3RiQmtDeFl0N2twY1dDRXdRTUFNTGtjSGU3ZFJSNk5WUC11c1pwWjY4?oc=5",
+      "severity": "medium"
+    },
+    {
+      "id": "ss_26",
+      "title": "Twelve Cupcakes fined $119,500 for underpaying 7 foreign staff",
+      "source_type": "google_news",
+      "timeframe": "2021",
+      "evidence": "Twelve Cupcakes fined $119,500 for underpaying 7 foreign staff. Twelve Cupcakes fined $119,500 for underpaying 7 foreign staff  Yahoo News Singapore",
+      "evidence_url": "https://news.google.com/rss/articles/CBMimwFBVV95cUxOU2RubmxZYlc2RWMxQ2FNVnRaa1JLOTN1SzV1Vmd5UzBtYXpDMjBwUWJuUUNCcXZHa3lxdVg3ODVzWFZwRVNPWmNlekJBS21TUWwyVHJWZjZ1a1JYcTExeWljcE55Z2tMQ1M0d2VqN0ZpM3hrTE1hYWtWVjQ1Q2d2OXlCMFpXcFZNekJycjhyem1INXZKby11M3F5bw?oc=5",
       "severity": "medium"
     },
     {
@@ -212,6 +204,15 @@
       "severity": "medium"
     },
     {
+      "id": "ss_40",
+      "title": "Jaime Teo fined $65,000 for Twelve Cupcakes’ failure to pay 7 foreign employees full salaries",
+      "source_type": "google_news",
+      "timeframe": "2021",
+      "evidence": "Jaime Teo fined $65,000 for Twelve Cupcakes’ failure to pay 7 foreign employees full salaries. Jaime Teo fined $65,000 for Twelve Cupcakes’ failure to pay 7 foreign employees full salaries  Yahoo News Singapore",
+      "evidence_url": "https://news.google.com/rss/articles/CBMisgFBVV95cUxQTVpNWDU2eUJ4UDA0cHRXdTA1SzBZalg2dS1ycWNvMXBpSWgxWGo0VkUwQ1J5YWx1OW1uUWJQNGQ1MTZHNVlIVUoyLWd2ZmFMa2dENWxNb1VNMkFXeFRuUnFRckt1c1pPLUduZmc1cmdPUmRJR1RvbVR0YTdQaklKVzlfN0ROUVZORkhNWVhOTGhTX3lRRGZNMTM0NGpIQk9XaTZoTVNhb1hmRU1EYVRXUmpR?oc=5",
+      "severity": "medium"
+    },
+    {
       "id": "ss_41",
       "title": "Jaime Teo fined S$65,000 for underpaying Twelve Cupcakes foreign employees S$98,900 over 3 years",
       "source_type": "google_news",
@@ -264,6 +265,15 @@
       "evidence": "Twelve Cupcakes staff get vouchers from unions as clock ticks for them to find another job  lol we’re truly in the voucher era imagine being one of the staff.. hardworkingly preparing the cakes and cookies then suddenly one get flash mobbed and your job suddenly cease to exist. Not a single word from your supervisor/boss. NONE. You as a small prawn have to face it. Singapore is a pro pro-business country. Don't expect them to do anything extra for the working-level people. They cannot set a prec",
       "evidence_url": "https://www.reddit.com/r/singapore/comments/1oonxok/twelve_cupcakes_staff_get_vouchers_from_unions_as/",
       "severity": "medium"
+    },
+    {
+      "id": "ss_52",
+      "title": "Twelve Cupcakes under MOM probe for unpaid salaries, abrupt retrenchment of 80 staff",
+      "source_type": "social",
+      "timeframe": "Unknown",
+      "evidence": "Twelve Cupcakes under MOM probe for unpaid salaries, abrupt retrenchment of 80 staff  &gt;_Some workers did not receive their CPF contributions in October, The Business Times reported._\n\nOne simply does not mess with CPF non-payment!! https://dhunseritea.com/board-of-directors/ when you got bought by this kind of plantation company, gg When the business owners are based overseas and pull this stunt, they probably decided exit the country for good. What could MOM or the unions do? Let’s see how M",
+      "evidence_url": "https://www.reddit.com/r/singapore/comments/1oldtaj/twelve_cupcakes_under_mom_probe_for_unpaid/",
+      "severity": "medium"
     }
   ],
   "primary_signal_assignments": [
@@ -272,12 +282,12 @@
       "title": "WORKFORCE ISSUES",
       "assigned_count": 6,
       "assigned_ids": [
+        "ss_1",
         "ss_2",
         "ss_3",
-        "ss_6",
         "ss_7",
         "ss_11",
-        "ss_52"
+        "ss_18"
       ]
     },
     {
@@ -287,9 +297,9 @@
       "assigned_ids": [
         "ss_1",
         "ss_8",
-        "ss_10",
+        "ss_9",
         "ss_12",
-        "ss_18"
+        "ss_14"
       ]
     },
     {
@@ -300,8 +310,8 @@
         "ss_9",
         "ss_10",
         "ss_12",
-        "ss_49",
-        "ss_50"
+        "ss_48",
+        "ss_49"
       ]
     },
     {
@@ -309,31 +319,33 @@
       "title": "REGULATORY/LEGAL RISKS",
       "assigned_count": 5,
       "assigned_ids": [
+        "ss_3",
         "ss_6",
         "ss_17",
         "ss_21",
-        "ss_24",
-        "ss_26"
+        "ss_24"
       ]
     },
     {
       "primary_id": "ps_5",
       "title": "MARKET PERCEPTION",
-      "assigned_count": 3,
+      "assigned_count": 4,
       "assigned_ids": [
         "ss_43",
         "ss_44",
-        "ss_48"
+        "ss_49",
+        "ss_50"
       ]
     },
     {
       "primary_id": "ps_6",
       "title": "STRATEGIC ANOMALIES",
-      "assigned_count": 3,
+      "assigned_count": 4,
       "assigned_ids": [
+        "ss_14",
+        "ss_15",
         "ss_25",
-        "ss_39",
-        "ss_40"
+        "ss_39"
       ]
     },
     {

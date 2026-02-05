@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Link from "next/link";
 
 const Header: React.FC = () => {
   return (
@@ -17,12 +18,12 @@ const Header: React.FC = () => {
           </div>
         </div>
         <nav className="hidden md:flex items-center space-x-6">
-          <a
+          <Link
             href="/"
             className="text-sm font-semibold text-slate-600 hover:text-blue-600 transition-colors"
           >
             Scraper
-          </a>
+          </Link>
           <a
             href="/hypothesis"
             className="text-sm font-semibold text-slate-600 hover:text-blue-600 transition-colors"
