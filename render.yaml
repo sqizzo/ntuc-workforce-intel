@@ -1,11 +1,11 @@
 services:
   - type: web
     name: ntuc-workforce-backend
-    runtime: python
+    runtime: docker
     plan: free
     region: singapore
-    buildCommand: "apt-get update && apt-get install -y chromium chromium-driver && cd backend-py && pip install -r requirements.txt"
-    startCommand: "cd backend-py && chmod +x render_start.sh && ./render_start.sh"
+    rootDir: backend-py
+    dockerfilePath: ./Dockerfile
     envVars:
       - key: OPENAI_API_KEY
         sync: false
