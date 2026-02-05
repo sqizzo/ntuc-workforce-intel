@@ -4,7 +4,7 @@ import axios from "axios";
 const PYTHON_BACKEND_URL =
   process.env.PYTHON_BACKEND_URL || "http://localhost:8000";
 
-export const maxDuration = 1800;
+export const maxDuration = 500;
 
 export async function POST(request: NextRequest) {
   try {
