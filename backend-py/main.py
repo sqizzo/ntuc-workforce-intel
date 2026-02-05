@@ -243,26 +243,45 @@ async def scrape_workforce_signals(request: ScrapeRequest):
             except Exception as e:
                 logger.warning(f"Financial scraping failed: {e}")
             
-            # Add news scraping with company search sources  
-            try:
-                logger.info("📰 Initializing news scraper...")
-                company_sources = [s for s in CONFIG.get('company_search_sources', []) if s.get('enabled', True)]
-                logger.info(f"Found {len(company_sources)} news sources configured")
+            # Browser-based news scraping (disabled by default on Render to save RAM)
+            # Set ENABLE_BROWSER_SCRAPING=true locally to enable deep-dive news scraping
+            enable_browser_scraping = os.getenv('ENABLE_BROWSER_SCRAPING', 'false').lower() == 'true'
+            
+            if enable_browser_scraping:
+                try:
+                    logger.info("📰 Initializing browser news scraper...")
+                    company_sources = [s for s in CONFIG.get('company_search_sources', []) if s.get('enabled', True)]
+                    logger.info(f"Found {len(company_sources)} news sources configured")
+                    
+                    news_scraper = NewsSearchScraper(max_articles=5, company_sources=company_sources)
+                    logger.info("✓ News scraper initialized, starting search...")
+                    
+                    # Direct async call - no ThreadPoolExecutor needed!
+                    news_signals = await asyncio.wait_for(
+                        news_scraper.search_workforce_signals_company(request.companyName, request.before_date),
+                        timeout=120.0
+                    )
+                    signals.extend(news_signals)
+                    logger.info(f"✓ Found {len(news_signals)} news signals")
+                except asyncio.TimeoutError:
+                    logger.warning(f"⏱️ News scraping timed out after 120 seconds")
+                except Exception as e:
+                    logger.error(f"❌ News scraping failed: {e}", exc_info=True)
+            else:
+                logger.info("ℹ️ Browser-based news scraping disabled (set ENABLE_BROWSER_SCRAPING=true to enable)")
                 
-                news_scraper = NewsSearchScraper(max_articles=5, company_sources=company_sources)
-                logger.info("✓ News scraper initialized, starting search...")
-                
-                # Direct async call - no ThreadPoolExecutor needed!
-                news_signals = await asyncio.wait_for(
-                    news_scraper.search_workforce_signals_company(request.companyName, request.before_date),
-                    timeout=120.0
-                )
-                signals.extend(news_signals)
-                logger.info(f"✓ Found {len(news_signals)} news signals")
-            except asyncio.TimeoutError:
-                logger.warning(f"⏱️ News scraping timed out after 120 seconds")
-            except Exception as e:
-                logger.error(f"❌ News scraping failed: {e}", exc_info=True)
+                # Use Google News RSS as fallback (lightweight, no browser needed)
+                try:
+                    logger.info("📰 Fetching news via Google News RSS (lightweight)...")
+                    google_news_scraper = GoogleNewsRSSScraper(max_articles=10)
+                    news_signals = google_news_scraper.search_workforce_signals(
+                        query=request.companyName,
+                        before_date=request.before_date
+                    )
+                    signals.extend(news_signals)
+                    logger.info(f"✓ Found {len(news_signals)} Google News signals")
+                except Exception as e:
+                    logger.error(f"❌ Google News RSS failed: {e}", exc_info=True)
             
             # Add Reddit scraping for company mentions across multiple subreddits
             try:

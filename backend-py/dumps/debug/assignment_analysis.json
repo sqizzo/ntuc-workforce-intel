@@ -1,28 +1,27 @@
 {
   "total_supporting_signals": 45,
-  "total_assigned": 25,
-  "total_unassigned": 20,
+  "total_assigned": 26,
+  "total_unassigned": 19,
   "unassigned_signal_ids": [
+    "ss_24",
     "ss_27",
-    "ss_35",
-    "ss_14",
     "ss_32",
-    "ss_28",
-    "ss_39",
-    "ss_45",
-    "ss_16",
-    "ss_44",
-    "ss_38",
-    "ss_33",
-    "ss_25",
-    "ss_30",
-    "ss_3",
     "ss_31",
     "ss_26",
-    "ss_11",
+    "ss_16",
+    "ss_40",
+    "ss_30",
+    "ss_3",
+    "ss_33",
+    "ss_44",
+    "ss_14",
+    "ss_28",
+    "ss_35",
     "ss_29",
-    "ss_6",
-    "ss_13"
+    "ss_13",
+    "ss_25",
+    "ss_39",
+    "ss_6"
   ],
   "unassigned_details": [
     {
@@ -41,15 +40,6 @@
       "timeframe": "2011",
       "evidence": "Twelve Cupcakes. Twelve Cupcakes  Miss Tam Chiak",
       "evidence_url": "https://news.google.com/rss/articles/CBMiWEFVX3lxTE1jRThUV0tvaTRmVEhxbzVkWEhjbUh6d0hPZU5EeHh0OTEwM3RTWUk2a29za2lBc0R0NkgwMEJ3VU9QOFo1OTYxYk1KSDdDM25Nd2Rzd1llMzA?oc=5",
-      "severity": "medium"
-    },
-    {
-      "id": "ss_11",
-      "title": "Twelve Cupcakes admits to underpaying foreign employees over 2 years; lawyer says founders started t",
-      "source_type": "google_news",
-      "timeframe": "2020",
-      "evidence": "Twelve Cupcakes admits to underpaying foreign employees over 2 years; lawyer says founders started the practice. Twelve Cupcakes admits to underpaying foreign employees over 2 years; lawyer says founders started the practice  todayonline.com",
-      "evidence_url": "https://news.google.com/rss/articles/CBMiwgFBVV95cUxPcG1JSVFRV2lEVDF2WFl3OFloYmlWMGZybTFLVk81ZWxwWDdsMmtIekhrc2FyQk92TVpKUUZqb1dPcTF5ckwxQkswNllGdWpDdUV6N245dWk5Y2djeHhXNjVOTmhHNWdGRnlLZUY3SkNUMXNjV0FvaHUwVTVBVVlQbzNtVnFPTlJSVUEyVVhyY0Njdkh0Y3k0ZmNscDVOSEE0Ny1jYmk4Z0NzMjdYQXVvendvTUNmRkY5cEFybmhjTHViQQ?oc=5",
       "severity": "medium"
     },
     {
@@ -77,6 +67,15 @@
       "timeframe": "2020",
       "evidence": "Twelve Cupcakes founders Daniel Ong and Jaime Teo charged with employment offences. Twelve Cupcakes founders Daniel Ong and Jaime Teo charged with employment offences  CNA",
       "evidence_url": "https://news.google.com/rss/articles/CBMiowFBVV95cUxQTEl1SUxyWVJZZHlFTU9YbzhzZF9lbzNqdzN2UDJzLUNlcWlaS3VlSXhhRHNzOGkxQ2kxcEFEX09RODFyOGItelp0bFliRWh5Tzlfc3JLWTJSNjM1RndJamFXZmE1V0dqYXVady05WDV5RkhvVld1bUlJU25iSWdMOGhHR1J5RzlORGJCUG1OYk5FbG82LW5SbEU4NFJjMXVGaHY0?oc=5",
+      "severity": "medium"
+    },
+    {
+      "id": "ss_24",
+      "title": "Twelve Cupcakes fined S$119,500 for underpaying staff from 2016 to 2018",
+      "source_type": "google_news",
+      "timeframe": "2021",
+      "evidence": "Twelve Cupcakes fined S$119,500 for underpaying staff from 2016 to 2018. Twelve Cupcakes fined S$119,500 for underpaying staff from 2016 to 2018  Mothership",
+      "evidence_url": "https://news.google.com/rss/articles/CBMif0FVX3lxTE9sTU12MnJYdXdxOW8wWGJGU1ExUWdFUlY2czl6VHUxQzhkX3lhMGVfVG5YSmlGaW4waDc1RnYwMVNzV3NHenZqRkZyYjVRcDI0bVZsUkdJMnN3ZEFYSExYbkFsak1ZaGpnOGhqQ2lPOXVYUU1LZHQ4TTBjLWZiRHM?oc=5",
       "severity": "medium"
     },
     {
@@ -170,21 +169,21 @@
       "severity": "medium"
     },
     {
-      "id": "ss_38",
-      "title": "Toddler’s snacks with halal certificate",
-      "source_type": "social",
-      "timeframe": "Unknown",
-      "evidence": "Toddler’s snacks with halal certificate My 2 yr old son’s school is having a father’s day event and encourages parents to bring some food for potluck. Initially I was thinking of making a homemade cake then the teacher told us the food must have halal certificate. I looked around the supermarket but couldn’t find something suitable for toddlers with halal cert. Any advice what I can buy for the kids? Thanks. Perhaps a mixed goodie bag of [multiple flavoured pocky sticks](https://www.fairprice.co",
-      "evidence_url": "https://www.reddit.com/r/askSingapore/comments/1de4wcl/toddlers_snacks_with_halal_certificate/",
-      "severity": "medium"
-    },
-    {
       "id": "ss_39",
       "title": "Can I sue my employer?",
       "source_type": "social",
       "timeframe": "Unknown",
       "evidence": "Can I sue my employer? I’m a foreigner and company issued my S-PASS in finance. August 2023, 1st month of spass my boss retrieve 1 month of my salary, he said it’s because my MAS license (since I work in finance) is not out yet so I’m still considered not working for them. September 15 comes and my license came out.  I receive my full salary and now boss retrieve half of my salary since the license just came out half of the month. \n\nFast forward, I resigned already for not being able to achieve ",
       "evidence_url": "https://www.reddit.com/r/askSingapore/comments/199wa2f/can_i_sue_my_employer/",
+      "severity": "medium"
+    },
+    {
+      "id": "ss_40",
+      "title": "Cookies in singapore",
+      "source_type": "social",
+      "timeframe": "Unknown",
+      "evidence": "Cookies in singapore Thanks to the chocolate cake guy, the thread opened my eyes to the many places to get chocolate cake in singapore 🤓\n\nAbout cookies! 🍪\n\nWhere can I find the best cookies in Singapore? \n \nI love both chewy and crunchy types. What are your personal favourites? \n\nMy fav Chewy type: Ben’s cookie \nI got them once at wisma basement. I’m not sure if they’re still there but in my memory  it was warm, gooey, chewy, moist in the middle and crusty on the outside. \n\n\nMy fav Crunchy type:",
+      "evidence_url": "https://www.reddit.com/r/askSingapore/comments/qrjlp4/cookies_in_singapore/",
       "severity": "medium"
     },
     {
@@ -195,15 +194,6 @@
       "evidence": "Twelve Cupcakes staff get vouchers from unions as clock ticks for them to find another job  lol we’re truly in the voucher era imagine being one of the staff.. hardworkingly preparing the cakes and cookies then suddenly one get flash mobbed and your job suddenly cease to exist. Not a single word from your supervisor/boss. NONE. You as a small prawn have to face it. Singapore is a pro pro-business country. Don't expect them to do anything extra for the working-level people. They cannot set a prec",
       "evidence_url": "https://www.reddit.com/r/singapore/comments/1oonxok/twelve_cupcakes_staff_get_vouchers_from_unions_as/",
       "severity": "medium"
-    },
-    {
-      "id": "ss_45",
-      "title": "Twelve Cupcakes under MOM probe for unpaid salaries, abrupt retrenchment of 80 staff",
-      "source_type": "social",
-      "timeframe": "Unknown",
-      "evidence": "Twelve Cupcakes under MOM probe for unpaid salaries, abrupt retrenchment of 80 staff  &gt;_Some workers did not receive their CPF contributions in October, The Business Times reported._\n\nOne simply does not mess with CPF non-payment!! https://dhunseritea.com/board-of-directors/ when you got bought by this kind of plantation company, gg When the business owners are based overseas and pull this stunt, they probably decided exit the country for good. What could MOM or the unions do? Let’s see how M",
-      "evidence_url": "https://www.reddit.com/r/singapore/comments/1oldtaj/twelve_cupcakes_under_mom_probe_for_unpaid/",
-      "severity": "medium"
     }
   ],
   "primary_signal_assignments": [
@@ -213,11 +203,11 @@
       "assigned_count": 6,
       "assigned_ids": [
         "ss_1",
+        "ss_5",
         "ss_20",
         "ss_21",
         "ss_22",
-        "ss_23",
-        "ss_24"
+        "ss_23"
       ]
     },
     {
@@ -228,19 +218,20 @@
         "ss_5",
         "ss_9",
         "ss_10",
-        "ss_12",
+        "ss_11",
         "ss_15",
-        "ss_19"
+        "ss_17"
       ]
     },
     {
       "primary_id": "ps_3",
       "title": "REGULATORY/LEGAL RISKS",
-      "assigned_count": 5,
+      "assigned_count": 6,
       "assigned_ids": [
         "ss_10",
+        "ss_12",
         "ss_15",
-        "ss_17",
+        "ss_19",
         "ss_20",
         "ss_34"
       ]
@@ -248,51 +239,48 @@
     {
       "primary_id": "ps_4",
       "title": "OPERATIONAL DEGRADATION",
-      "assigned_count": 5,
+      "assigned_count": 6,
       "assigned_ids": [
         "ss_1",
         "ss_4",
+        "ss_41",
+        "ss_42",
+        "ss_43",
+        "ss_45"
+      ]
+    },
+    {
+      "primary_id": "ps_5",
+      "title": "MARKET PERCEPTION",
+      "assigned_count": 5,
+      "assigned_ids": [
+        "ss_2",
+        "ss_36",
         "ss_41",
         "ss_42",
         "ss_43"
       ]
     },
     {
-      "primary_id": "ps_5",
-      "title": "MARKET PERCEPTION",
-      "assigned_count": 3,
-      "assigned_ids": [
-        "ss_2",
-        "ss_36",
-        "ss_41"
-      ]
-    },
-    {
       "primary_id": "ps_6",
       "title": "STRATEGIC ANOMALIES",
-      "assigned_count": 3,
+      "assigned_count": 5,
       "assigned_ids": [
+        "ss_2",
         "ss_7",
         "ss_8",
-        "ss_18"
+        "ss_18",
+        "ss_19"
       ]
     },
     {
       "primary_id": "ps_7",
       "title": "INDUSTRY CHALLENGES",
-      "assigned_count": 2,
+      "assigned_count": 3,
       "assigned_ids": [
         "ss_36",
-        "ss_37"
-      ]
-    },
-    {
-      "primary_id": "ps_8",
-      "title": "PRODUCT & CUSTOMER EROSION",
-      "assigned_count": 2,
-      "assigned_ids": [
-        "ss_36",
-        "ss_40"
+        "ss_37",
+        "ss_38"
       ]
     }
   ]

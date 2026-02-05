@@ -2,20 +2,20 @@
   {
     "id": "ps_1",
     "title": "FINANCIAL DISTRESS",
-    "description": "Concerns related to debt, losses, and poor financial performance",
+    "description": "Indicators of financial instability, including debt and unpaid obligations",
     "risk_level": "high",
     "supporting_signal_ids": [
       "ss_1",
+      "ss_5",
       "ss_20",
       "ss_21",
       "ss_22",
-      "ss_23",
-      "ss_24"
+      "ss_23"
     ],
     "key_indicators": [
       "Debt to creditors",
-      "Fines for underpayment",
-      "Financial liabilities"
+      "Unpaid salaries",
+      "Fines imposed"
     ],
     "source_distribution": {
       "News": 6,
@@ -32,9 +32,9 @@
       "ss_5",
       "ss_9",
       "ss_10",
-      "ss_12",
+      "ss_11",
       "ss_15",
-      "ss_19"
+      "ss_17"
     ],
     "key_indicators": [
       "Underpayment",
@@ -50,22 +50,23 @@
   {
     "id": "ps_3",
     "title": "REGULATORY/LEGAL RISKS",
-    "description": "Issues related to legal compliance, fines, and regulatory scrutiny",
+    "description": "Legal challenges, fines, and compliance issues faced by the company",
     "risk_level": "high",
     "supporting_signal_ids": [
       "ss_10",
+      "ss_12",
       "ss_15",
-      "ss_17",
+      "ss_19",
       "ss_20",
       "ss_34"
     ],
     "key_indicators": [
       "Legal charges",
-      "Fines imposed",
+      "Fines",
       "Regulatory investigations"
     ],
     "source_distribution": {
-      "News": 5,
+      "News": 6,
       "Social": 0,
       "Financial": 0
     }
@@ -80,57 +81,62 @@
       "ss_4",
       "ss_41",
       "ss_42",
-      "ss_43"
+      "ss_43",
+      "ss_45"
     ],
     "key_indicators": [
       "Business closure",
-      "Operational shutdown",
+      "Operational cessation",
       "Liquidation"
     ],
     "source_distribution": {
       "News": 2,
-      "Social": 3,
+      "Social": 4,
       "Financial": 0
     }
   },
   {
     "id": "ps_5",
     "title": "MARKET PERCEPTION",
-    "description": "Concerns related to reputation and customer sentiment",
+    "description": "Public sentiment and reputation issues affecting the brand",
     "risk_level": "medium",
     "supporting_signal_ids": [
       "ss_2",
       "ss_36",
-      "ss_41"
+      "ss_41",
+      "ss_42",
+      "ss_43"
     ],
     "key_indicators": [
       "Customer complaints",
-      "Public sentiment",
-      "Brand reputation"
+      "Negative media coverage",
+      "Public backlash"
     ],
     "source_distribution": {
       "News": 1,
-      "Social": 2,
+      "Social": 4,
       "Financial": 0
     }
   },
   {
     "id": "ps_6",
     "title": "STRATEGIC ANOMALIES",
-    "description": "Issues related to management decisions and strategic direction",
+    "description": "Management decisions and strategic missteps impacting the business",
     "risk_level": "medium",
     "supporting_signal_ids": [
+      "ss_2",
       "ss_7",
       "ss_8",
-      "ss_18"
+      "ss_18",
+      "ss_19"
     ],
     "key_indicators": [
       "Management changes",
-      "Strategic acquisitions",
+      "Business strategy shifts",
       "Ownership transitions"
     ],
     "source_distribution": {
-      "News": 3,
+      "News": 5,
       "Social": 0,
       "Financial": 0
     }
@@ -138,38 +144,21 @@
   {
     "id": "ps_7",
     "title": "INDUSTRY CHALLENGES",
-    "description": "Challenges related to market saturation and consumer trends",
+    "description": "Market dynamics affecting the business environment",
     "risk_level": "medium",
     "supporting_signal_ids": [
       "ss_36",
-      "ss_37"
+      "ss_37",
+      "ss_38"
     ],
     "key_indicators": [
-      "Market competition",
-      "Consumer trend shifts"
+      "Market saturation",
+      "Changing consumer preferences",
+      "Competitive pressures"
     ],
     "source_distribution": {
       "News": 0,
-      "Social": 2,
-      "Financial": 0
-    }
-  },
-  {
-    "id": "ps_8",
-    "title": "PRODUCT & CUSTOMER EROSION",
-    "description": "Concerns related to product quality and customer satisfaction",
-    "risk_level": "medium",
-    "supporting_signal_ids": [
-      "ss_36",
-      "ss_40"
-    ],
-    "key_indicators": [
-      "Product quality decline",
-      "Customer dissatisfaction"
-    ],
-    "source_distribution": {
-      "News": 0,
-      "Social": 2,
+      "Social": 3,
       "Financial": 0
     }
   }
