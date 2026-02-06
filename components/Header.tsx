@@ -17,32 +17,6 @@ const Header: React.FC = () => {
             </h1>
           </div>
         </div>
-        <nav className="hidden md:flex items-center space-x-6">
-          <Link
-            href="/"
-            className="text-sm font-semibold text-slate-600 hover:text-blue-600 transition-colors"
-          >
-            Scraper
-          </Link>
-          <a
-            href="/hypothesis"
-            className="text-sm font-semibold text-slate-600 hover:text-blue-600 transition-colors"
-          >
-            Risk Hypothesis
-          </a>
-          <a
-            href="#"
-            className="text-sm font-semibold text-slate-600 hover:text-blue-600 transition-colors"
-          >
-            Risk Dashboard
-          </a>
-          <a
-            href="#"
-            className="text-sm font-semibold text-slate-600 hover:text-blue-600 transition-colors"
-          >
-            Methodology
-          </a>
-        </nav>
       </div>
     </header>
   );

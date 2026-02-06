@@ -157,6 +157,7 @@ export interface SupportingSignal {
   source_type: "News" | "Social" | "Financial";
   timeframe: string;
   evidence: string;
+  evidence_url?: string;
   severity: "low" | "medium" | "high";
   risk_score: number; // 0-100
   risk_reasoning: string;

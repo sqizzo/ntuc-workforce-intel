@@ -1,142 +1,100 @@
 [
   {
     "id": "ps_1",
-    "title": "FINANCIAL DISTRESS",
-    "description": "Indicators of financial instability, including debt and unpaid obligations",
+    "title": "OPERATIONAL DEGRADATION",
+    "description": "Evidence of declining operations, store closures, and business sustainability concerns",
     "risk_level": "high",
     "supporting_signal_ids": [
-      "ss_1",
-      "ss_5",
-      "ss_20",
-      "ss_21",
-      "ss_22",
-      "ss_23"
+      "ss_26"
     ],
-    "key_indicators": [
-      "Debt to creditors",
-      "Unpaid salaries",
-      "Fines imposed"
-    ],
+    "key_indicators": [],
     "source_distribution": {
-      "News": 6,
-      "Social": 0,
-      "Financial": 0
-    }
-  },
-  {
-    "id": "ps_2",
-    "title": "WORKFORCE ISSUES",
-    "description": "Concerns related to employee treatment, layoffs, and labor violations",
-    "risk_level": "high",
-    "supporting_signal_ids": [
-      "ss_5",
-      "ss_9",
-      "ss_10",
-      "ss_11",
-      "ss_15",
-      "ss_17"
-    ],
-    "key_indicators": [
-      "Underpayment",
-      "Labor violations",
-      "Union activity"
-    ],
-    "source_distribution": {
-      "News": 6,
+      "News": 1,
       "Social": 0,
       "Financial": 0
     }
   },
   {
     "id": "ps_3",
-    "title": "REGULATORY/LEGAL RISKS",
-    "description": "Legal challenges, fines, and compliance issues faced by the company",
+    "title": "WORKFORCE ISSUES",
+    "description": "Concerns related to employee treatment, layoffs, underpayment, and labor violations",
     "risk_level": "high",
     "supporting_signal_ids": [
-      "ss_10",
-      "ss_12",
-      "ss_15",
-      "ss_19",
-      "ss_20",
-      "ss_34"
+      "ss_25"
     ],
-    "key_indicators": [
-      "Legal charges",
-      "Fines",
-      "Regulatory investigations"
-    ],
+    "key_indicators": [],
     "source_distribution": {
-      "News": 6,
+      "News": 1,
       "Social": 0,
       "Financial": 0
     }
   },
   {
     "id": "ps_4",
-    "title": "OPERATIONAL DEGRADATION",
-    "description": "Evidence of declining operations and business closures",
+    "title": "REGULATORY/LEGAL RISKS",
+    "description": "Legal challenges, fines, prosecutions, and compliance issues",
     "risk_level": "high",
     "supporting_signal_ids": [
-      "ss_1",
-      "ss_4",
-      "ss_41",
-      "ss_42",
-      "ss_43",
-      "ss_45"
+      "ss_6"
     ],
-    "key_indicators": [
-      "Business closure",
-      "Operational cessation",
-      "Liquidation"
-    ],
+    "key_indicators": [],
     "source_distribution": {
-      "News": 2,
-      "Social": 4,
+      "News": 1,
+      "Social": 0,
       "Financial": 0
     }
   },
   {
     "id": "ps_5",
     "title": "MARKET PERCEPTION",
-    "description": "Public sentiment and reputation issues affecting the brand",
+    "description": "Public sentiment, reputation concerns, and customer complaints",
     "risk_level": "medium",
     "supporting_signal_ids": [
+      "ss_1",
       "ss_2",
-      "ss_36",
-      "ss_41",
-      "ss_42",
-      "ss_43"
+      "ss_5",
+      "ss_7",
+      "ss_8",
+      "ss_12",
+      "ss_13",
+      "ss_14",
+      "ss_15",
+      "ss_16",
+      "ss_17",
+      "ss_18",
+      "ss_19",
+      "ss_20",
+      "ss_21",
+      "ss_22",
+      "ss_23",
+      "ss_27",
+      "ss_28",
+      "ss_29",
+      "ss_30",
+      "ss_32",
+      "ss_33",
+      "ss_34",
+      "ss_35",
+      "ss_36"
     ],
-    "key_indicators": [
-      "Customer complaints",
-      "Negative media coverage",
-      "Public backlash"
-    ],
+    "key_indicators": [],
     "source_distribution": {
-      "News": 1,
-      "Social": 4,
+      "News": 25,
+      "Social": 1,
       "Financial": 0
     }
   },
   {
     "id": "ps_6",
     "title": "STRATEGIC ANOMALIES",
-    "description": "Management decisions and strategic missteps impacting the business",
+    "description": "Management decisions, ownership changes, and strategic issues",
     "risk_level": "medium",
     "supporting_signal_ids": [
-      "ss_2",
-      "ss_7",
-      "ss_8",
-      "ss_18",
-      "ss_19"
+      "ss_3"
     ],
-    "key_indicators": [
-      "Management changes",
-      "Business strategy shifts",
-      "Ownership transitions"
-    ],
+    "key_indicators": [],
     "source_distribution": {
-      "News": 5,
+      "News": 1,
       "Social": 0,
       "Financial": 0
     }
@@ -144,21 +102,35 @@
   {
     "id": "ps_7",
     "title": "INDUSTRY CHALLENGES",
-    "description": "Market dynamics affecting the business environment",
+    "description": "Market saturation, competitive pressure, and consumer trend shifts",
     "risk_level": "medium",
     "supporting_signal_ids": [
-      "ss_36",
-      "ss_37",
-      "ss_38"
+      "ss_4",
+      "ss_9",
+      "ss_10",
+      "ss_11",
+      "ss_24",
+      "ss_31"
     ],
-    "key_indicators": [
-      "Market saturation",
-      "Changing consumer preferences",
-      "Competitive pressures"
+    "key_indicators": [],
+    "source_distribution": {
+      "News": 6,
+      "Social": 0,
+      "Financial": 0
+    }
+  },
+  {
+    "id": "ps_8",
+    "title": "PRODUCT/SERVICE ISSUES",
+    "description": "Quality decline, product defects, and service failures",
+    "risk_level": "medium",
+    "supporting_signal_ids": [
+      "ss_37"
     ],
+    "key_indicators": [],
     "source_distribution": {
       "News": 0,
-      "Social": 3,
+      "Social": 1,
       "Financial": 0
     }
   }

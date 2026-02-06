@@ -60,6 +60,11 @@ export default function HypothesisViewer({
       }
 
       const data: HypothesisAnalysis = await response.json();
+      console.log("📊 Hypothesis Analysis Data:", data);
+      console.log(
+        "📋 Supporting Signals Sample:",
+        data.supporting_signals?.slice(0, 3),
+      );
       setAnalysis(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unknown error occurred");
@@ -532,10 +537,27 @@ export default function HypothesisViewer({
                           {signal.risk_reasoning}
                         </p>
                       </div>
-                      <p className="text-sm text-gray-700 bg-gray-50 p-3 rounded">
-                        <span className="font-medium">Evidence: </span>
-                        {signal.evidence}
-                      </p>
+                      <div className="text-sm text-gray-700 bg-gray-50 p-3 rounded">
+                        <div className="mb-2">
+                          <span className="font-medium">Evidence URL:</span>
+                        </div>
+                        <div className="space-y-2">
+                          <p className="text-xs text-gray-600 break-all">
+                            {signal.evidence_url || "NO URL FOUND"}
+                          </p>
+                          {signal.evidence_url && (
+                            <a
+                              href={signal.evidence_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-md hover:bg-blue-700 transition-colors"
+                            >
+                              <i className="fas fa-external-link-alt"></i>
+                              View Source
+                            </a>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   ))}
                 </div>

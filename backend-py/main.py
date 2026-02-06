@@ -10,6 +10,8 @@ import logging
 import json
 import os
 import asyncio
+from datetime import datetime
+from email.utils import parsedate_to_datetime
 
 from scrapers.financial_scraper import FinancialDataScraper
 from scrapers.news_scraper_async import NewsSearchScraperAsync as NewsSearchScraper
@@ -22,6 +24,104 @@ from ai_service import AIService, WorkforceRelevanceFilter
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+
+def _parse_date_value(value: Any) -> Optional[datetime]:
+    """Parse a date value into a datetime, returning None if parsing fails."""
+    if value is None:
+        return None
+    if isinstance(value, datetime):
+        return value
+    if isinstance(value, (int, float)):
+        try:
+            return datetime.fromtimestamp(value)
+        except Exception:
+            return None
+
+    text = str(value).strip()
+    if not text:
+        return None
+
+    # ISO formats (handle Zulu)
+    try:
+        return datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except Exception:
+        pass
+
+    # RFC 2822 / RSS
+    try:
+        return parsedate_to_datetime(text)
+    except Exception:
+        pass
+
+    # Common date formats
+    for fmt in (
+        "%Y-%m-%d",
+        "%d %b %Y",
+        "%b %d, %Y",
+        "%d %B %Y",
+        "%B %d, %Y",
+    ):
+        try:
+            return datetime.strptime(text, fmt)
+        except Exception:
+            continue
+
+    return None
+
+
+def _get_published_date_value(signal: Dict[str, Any]) -> Optional[Any]:
+    if not isinstance(signal, dict):
+        return None
+    metadata = signal.get("metadata") or {}
+    return (
+        signal.get("published_date")
+        or metadata.get("publish_date")
+        or metadata.get("published_date")
+        or metadata.get("date")
+        or signal.get("created_date")
+        or signal.get("post_date")
+        or signal.get("post_created")
+    )
+
+
+def _filter_signals_before_date(
+    signals: List[Dict[str, Any]], before_date: Optional[str]
+) -> List[Dict[str, Any]]:
+    """Filter signals to those published strictly before the given date."""
+    if not before_date:
+        return signals
+
+    filter_dt = _parse_date_value(before_date)
+    if not filter_dt:
+        logger.warning("Invalid before_date value: %s", before_date)
+        return signals
+
+    filtered = []
+    for signal in signals:
+        published_value = _get_published_date_value(signal)
+        published_dt = _parse_date_value(published_value)
+
+        # If no published date is available, keep the signal (do not fall back to scrape time)
+        if not published_dt:
+            filtered.append(signal)
+            continue
+
+        filter_dt_compare = filter_dt
+        if published_dt.tzinfo is not None and filter_dt_compare.tzinfo is None:
+            published_dt = published_dt.replace(tzinfo=None)
+        elif published_dt.tzinfo is None and filter_dt_compare.tzinfo is not None:
+            filter_dt_compare = filter_dt_compare.replace(tzinfo=None)
+
+        if published_dt < filter_dt_compare:
+            filtered.append(signal)
+
+    logger.info(
+        "Date filter applied using published date: %s -> %s signals",
+        len(signals),
+        len(filtered),
+    )
+    return filtered
 
 # Load configuration
 def load_config():
@@ -317,6 +417,10 @@ async def scrape_workforce_signals(request: ScrapeRequest):
                 logger.info(f"Found {len(gnews_signals)} oldest signals from Google News for {request.companyName}")
             except Exception as e:
                 logger.warning(f"Google News scraping failed: {e}")
+
+            # Apply date filter based on published date (not scrape time)
+            if signals and request.before_date:
+                signals = _filter_signals_before_date(signals, request.before_date)
             
             # Extract actual workforce data from signals if we have them
             if financial_result and signals:
@@ -402,6 +506,10 @@ async def scrape_workforce_signals(request: ScrapeRequest):
                 logger.warning(f"Reddit scraping failed: {e}")
         
         logger.info(f"Successfully scraped {len(signals)} signals")
+
+        # Apply date filter based on published date (not scrape time)
+        if signals and request.before_date:
+            signals = _filter_signals_before_date(signals, request.before_date)
         
         # Apply AI-powered relevance filtering
         if signals and request.enable_smart_filtering:

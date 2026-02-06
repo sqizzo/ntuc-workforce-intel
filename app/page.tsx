@@ -41,7 +41,7 @@ const INITIAL_KEYWORDS = [
 ];
 
 export default function Home() {
-  const [mode, setMode] = useState<ScraperMode>(ScraperMode.GENERAL);
+  const [mode, setMode] = useState<ScraperMode>(ScraperMode.COMPANY);
   const [keywords, setKeywords] = useState<string[]>(INITIAL_KEYWORDS);
   const [newKeyword, setNewKeyword] = useState("");
   const [companyName, setCompanyName] = useState("");
@@ -63,6 +63,13 @@ export default function Home() {
   const [hypothesisLoading, setHypothesisLoading] = useState(false);
   const [selectedPrimarySignal, setSelectedPrimarySignal] =
     useState<PrimarySignal | null>(null);
+  const [sortBy, setSortBy] = useState<
+    "extraction" | "date-newest" | "date-oldest"
+  >("date-newest");
+  const [sourceFilters, setSourceFilters] = useState<string[]>([
+    "news",
+    "social",
+  ]);
 
   const handleAddKeyword = (e: React.FormEvent) => {
     e.preventDefault();
@@ -101,6 +108,15 @@ export default function Home() {
 
       if (response.ok) {
         const analysis: HypothesisAnalysis = await response.json();
+        console.log("📊 Received Hypothesis Analysis:", analysis);
+        console.log(
+          "📋 Supporting Signals Count:",
+          analysis.supporting_signals?.length,
+        );
+        console.log(
+          "📋 First 3 Supporting Signals:",
+          analysis.supporting_signals?.slice(0, 3),
+        );
         setHypothesisAnalysis(analysis);
       } else {
         console.log("Hypothesis analysis not available for this company");
@@ -264,6 +280,60 @@ export default function Home() {
     );
   };
 
+  // Sort and filter signals based on selected options
+  const sortedSignals = useMemo(() => {
+    // First filter by source type
+    let filteredSignals = signals.filter((signal) => {
+      const sourceType = signal.source_type || "news";
+
+      // Map actual source types to filter categories
+      if (
+        sourceFilters.includes("news") &&
+        (sourceType === "news" ||
+          signal.metadata?.scraper === "google_news_rss")
+      ) {
+        return true;
+      }
+      if (sourceFilters.includes("social") && sourceType === "social") {
+        return true;
+      }
+      if (sourceFilters.includes("financial") && sourceType === "financial") {
+        return true;
+      }
+
+      return false;
+    });
+
+    // Then sort
+    if (sortBy === "date-newest" || sortBy === "date-oldest") {
+      filteredSignals.sort((a, b) => {
+        // Try to get date from multiple possible fields
+        const dateA =
+          a.metadata?.publish_date ||
+          a.metadata?.date ||
+          a.metadata?.published_date ||
+          a.ingestion_timestamp ||
+          "";
+        const dateB =
+          b.metadata?.publish_date ||
+          b.metadata?.date ||
+          b.metadata?.published_date ||
+          b.ingestion_timestamp ||
+          "";
+
+        // Convert to Date objects for comparison
+        const timeA = dateA ? new Date(dateA).getTime() : 0;
+        const timeB = dateB ? new Date(dateB).getTime() : 0;
+
+        // Sort newest first or oldest first
+        return sortBy === "date-newest" ? timeB - timeA : timeA - timeB;
+      });
+    }
+    // If sortBy === "extraction", keep original order (no sorting)
+
+    return filteredSignals;
+  }, [signals, sortBy, sourceFilters]);
+
   const renderSourceDistribution = (distribution: {
     News: number;
     Social: number;
@@ -346,8 +416,8 @@ export default function Home() {
 
             <div className="flex bg-slate-100 p-1 rounded-xl mb-6">
               <button
-                onClick={() => setMode(ScraperMode.GENERAL)}
-                className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${mode === ScraperMode.GENERAL ? "bg-white text-blue-600 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
+                disabled
+                className="flex-1 py-2 text-sm font-bold rounded-lg transition-all text-slate-400 cursor-not-allowed opacity-50"
               >
                 General Mode
               </button>
@@ -844,21 +914,89 @@ export default function Home() {
               {/* Workforce Signals */}
               {signals.length > 0 && (
                 <>
-                  <div className="flex items-center justify-between">
-                    <h2 className="text-xl font-bold text-slate-900">
-                      Detected Signals
-                      <span className="ml-2 bg-slate-100 text-slate-600 text-xs px-2 py-1 rounded-full">
-                        {signals.length} findings
+                  <div className="flex flex-col gap-3">
+                    <div className="flex items-center justify-between">
+                      <h2 className="text-xl font-bold text-slate-900">
+                        Detected Signals
+                        <span className="ml-2 bg-slate-100 text-slate-600 text-xs px-2 py-1 rounded-full">
+                          {sortedSignals.length}/{signals.length} findings
+                        </span>
+                      </h2>
+                      <div className="flex items-center gap-3">
+                        <label className="text-xs text-slate-600 font-medium">
+                          Sort by:
+                        </label>
+                        <select
+                          value={sortBy}
+                          onChange={(e) =>
+                            setSortBy(
+                              e.target.value as
+                                | "extraction"
+                                | "date-newest"
+                                | "date-oldest",
+                            )
+                          }
+                          className="text-xs border border-slate-200 rounded-lg px-3 py-1.5 bg-white text-slate-700 font-medium focus:ring-2 focus:ring-blue-100 focus:border-blue-500 outline-none"
+                        >
+                          <option value="extraction">Extraction Order</option>
+                          <option value="date-newest">
+                            Date (Newest First)
+                          </option>
+                          <option value="date-oldest">
+                            Date (Oldest First)
+                          </option>
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Source Filters */}
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm text-slate-600 font-medium">
+                        Filter:
                       </span>
-                    </h2>
-                    <div className="flex items-center space-x-2 text-xs text-slate-400 font-medium">
-                      <i className="fas fa-info-circle"></i>
-                      <span>Signals sorted by chronological extraction</span>
+                      <div className="flex items-center gap-2">
+                        {[
+                          { value: "news", label: "News" },
+                          { value: "social", label: "Social" },
+                        ].map((source) => {
+                          const isActive = sourceFilters.includes(source.value);
+                          return (
+                            <button
+                              key={source.value}
+                              onClick={() => {
+                                if (isActive) {
+                                  // Remove from filters (but keep at least one)
+                                  if (sourceFilters.length > 1) {
+                                    setSourceFilters(
+                                      sourceFilters.filter(
+                                        (f) => f !== source.value,
+                                      ),
+                                    );
+                                  }
+                                } else {
+                                  // Add to filters
+                                  setSourceFilters([
+                                    ...sourceFilters,
+                                    source.value,
+                                  ]);
+                                }
+                              }}
+                              className={`px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
+                                isActive
+                                  ? "bg-blue-600 text-white shadow-md hover:bg-blue-700"
+                                  : "bg-white text-slate-700 border border-slate-300 hover:border-slate-400 hover:bg-slate-50"
+                              }`}
+                            >
+                              {source.label}
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {signals.map((signal) => (
+                    {sortedSignals.map((signal) => (
                       <SignalCard
                         key={signal.id}
                         signal={signal}
@@ -994,9 +1132,25 @@ export default function Home() {
                     <p className="text-xs font-medium text-gray-700 mb-1">
                       Evidence:
                     </p>
-                    <p className="text-sm text-gray-700 bg-gray-50 p-3 rounded">
-                      {signal.evidence}
-                    </p>
+                    <div className="bg-gray-50 p-3 rounded space-y-2">
+                      {signal.evidence_url ? (
+                        <>
+                          <a
+                            href={signal.evidence_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-md hover:bg-blue-700 transition-colors"
+                          >
+                            <i className="fas fa-external-link-alt"></i>
+                            View Source
+                          </a>
+                        </>
+                      ) : (
+                        <p className="text-xs text-gray-400 italic">
+                          No source URL available
+                        </p>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}

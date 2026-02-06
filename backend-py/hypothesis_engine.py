@@ -209,6 +209,7 @@ class HypothesisEngine:
         """
         Convert raw input signals directly to supporting signals (1-to-1 mapping)
         Preserves all original signal data including URLs
+        Generates concise, insight-focused titles using AI
         
         Args:
             news_signals: List of news signal data
@@ -222,11 +223,28 @@ class HypothesisEngine:
         
         # Process news signals
         for signal in news_signals:
-            title = signal.get('metadata', {}).get('title', '') or signal.get('headline', '') or signal.get('extracted_text', '')[:60] + "..."
+            full_title = signal.get('metadata', {}).get('title', '') or signal.get('headline', '') or signal.get('extracted_text', '')[:60]
             source_type = signal.get('source_type', 'news')
             date = signal.get('metadata', {}).get('publish_date', '') or signal.get('published_date', '') or signal.get('metadata', {}).get('date', 'Unknown')
-            evidence = signal.get('extracted_text', 'No content available')
-            evidence_url = signal.get('source_url', '') or signal.get('url', '')
+            evidence_text = signal.get('extracted_text', 'No content available')
+            metadata = signal.get('metadata', {}) or {}
+            evidence_url = (
+                signal.get('source_url', '')
+                or signal.get('source_link', '')
+                or signal.get('link', '')
+                or signal.get('url', '')
+                or metadata.get('source_url', '')
+                or metadata.get('url', '')
+                or metadata.get('link', '')
+            )
+            
+            # Generate concise insight-focused title using AI
+            insight_title = self._generate_insight_title(full_title, evidence_text, source_type)
+            
+            # Clean evidence text (remove repetitive title at the end)
+            cleaned_evidence = self._clean_evidence_text(evidence_text, full_title)
+            
+            # Keep evidence text clean; render links separately in UI
             
             # Determine timeframe from date
             timeframe = 'Unknown'
@@ -243,10 +261,10 @@ class HypothesisEngine:
             
             supporting_signals.append({
                 "id": f"ss_{signal_counter}",
-                "title": title[:100],  # Limit title length
+                "title": insight_title,
                 "source_type": source_type,
                 "timeframe": timeframe,
-                "evidence": evidence[:500],  # Limit evidence length
+                "evidence": cleaned_evidence[:700],  # Increased limit to accommodate URL
                 "evidence_url": evidence_url,
                 "severity": "medium"  # Default severity, will be scored later
             })
@@ -254,27 +272,65 @@ class HypothesisEngine:
         
         # Process social signals
         for signal in social_signals:
-            title = signal.get('post_title', '') or signal.get('extracted_text', '')[:60] + "..."
+            full_title = signal.get('post_title', '') or signal.get('extracted_text', '')[:60]
             source_type = signal.get('source_type', 'social')
-            date = signal.get('created_date', '') or signal.get('metadata', {}).get('date', 'Unknown')
-            evidence = signal.get('extracted_text', '') or signal.get('post_text', 'No content available')
-            evidence_url = signal.get('source_url', '') or signal.get('url', '')
+            # Check multiple possible date fields for social/Reddit signals
+            date = (
+                signal.get('created_date', '')
+                or signal.get('metadata', {}).get('publish_date', '')
+                or signal.get('metadata', {}).get('date', '')
+                or signal.get('published_date', '')
+                or 'Unknown'
+            )
+            evidence_text = signal.get('extracted_text', '') or signal.get('post_text', 'No content available')
+            metadata = signal.get('metadata', {}) or {}
+            evidence_url = (
+                signal.get('source_url', '')
+                or signal.get('source_link', '')
+                or signal.get('link', '')
+                or signal.get('url', '')
+                or metadata.get('source_url', '')
+                or metadata.get('url', '')
+                or metadata.get('link', '')
+            )
+            
+            # Generate concise insight-focused title using AI
+            insight_title = self._generate_insight_title(full_title, evidence_text, source_type)
+            
+            # Clean evidence text
+            cleaned_evidence = self._clean_evidence_text(evidence_text, full_title)
+
+            # For social sources, prefer linking to the source instead of showing full content
+            if evidence_url:
+                cleaned_evidence = ""
+            
+            # Keep evidence text clean; render links separately in UI
             
             # Determine timeframe from date
             timeframe = 'Unknown'
             if date and date != 'Unknown':
                 try:
-                    year = str(date)[:4]
-                    timeframe = year
+                    from datetime import datetime as dt
+                    # Handle ISO format dates
+                    if 'T' in str(date) or '-' in str(date):
+                        parsed_date = dt.fromisoformat(str(date).replace('Z', '+00:00'))
+                        timeframe = str(parsed_date.year)
+                    else:
+                        year = str(date)[:4]
+                        timeframe = year
                 except:
-                    timeframe = 'Unknown'
+                    try:
+                        year = str(date)[:4]
+                        timeframe = year
+                    except:
+                        timeframe = 'Unknown'
             
             supporting_signals.append({
                 "id": f"ss_{signal_counter}",
-                "title": title[:100],
+                "title": insight_title,
                 "source_type": source_type,
                 "timeframe": timeframe,
-                "evidence": evidence[:500],
+                "evidence": cleaned_evidence[:700],
                 "evidence_url": evidence_url,
                 "severity": "medium"
             })
@@ -315,6 +371,121 @@ class HypothesisEngine:
                 "has_financial_data": financial_data is not None
             }
         }
+    
+    def _generate_insight_title(self, full_title: str, evidence_text: str, source_type: str) -> str:
+        """
+        Generate a concise, insight-focused title from the original title
+        Examples:
+        - "Company pleads guilty to underpaying employees" → "guilty of underpayment"
+        - "Store closure affects 50 workers" → "store closure, worker impact"
+        
+        Args:
+            full_title: Original full title
+            evidence_text: Full evidence text
+            source_type: Type of source (news, social, etc.)
+            
+        Returns:
+            Concise title string
+        """
+        if not full_title:
+            return "Untitled signal"
+        
+        # Use AI to extract key insight
+        prompt = f"""Extract the KEY INSIGHT from this headline in 2-5 words. Focus on the ACTION or EVENT.
+
+Headline: {full_title}
+
+Examples:
+- "Company x pleads guilty to underpaying 7 employees" → "guilty of underpayment"
+- "Company announces layoffs of 100 workers" → "layoffs announced"
+- "Store closure affects employees" → "store closure"
+
+Return ONLY the concise insight (2-5 words), nothing else."""
+        
+        try:
+            insight = self.ai_service.query(prompt, temperature=0.1, max_tokens=20)
+            insight = insight.strip()
+
+            # Remove code fences if present
+            if insight.startswith("```"):
+                insight = insight.strip("`\n \t")
+            
+            # Handle JSON responses
+            if insight.startswith('{'):
+                try:
+                    parsed = json.loads(insight)
+                    insight = (
+                        parsed.get('key_insight')
+                        or parsed.get('insight')
+                        or parsed.get('title')
+                        or parsed.get('summary')
+                        or insight
+                    )
+                except json.JSONDecodeError:
+                    # Best-effort extraction for malformed JSON-like responses
+                    import re
+                    match = re.search(r'"(?:key_insight|insight|title)"\s*:\s*"([^"]+)"', insight)
+                    if match:
+                        insight = match.group(1)
+            else:
+                # Handle embedded JSON in plain text
+                import re
+                match = re.search(r'\{[^\}]*"(?:key_insight|insight|title)"\s*:\s*"([^"]+)"[^\}]*\}', insight)
+                if match:
+                    insight = match.group(1)
+            
+            # Clean up quotes, backticks, and whitespace
+            insight = insight.strip('"\'\'` \n\r\t')
+            
+            # Capitalize first letter
+            if insight:
+                insight = insight[0].upper() + insight[1:]
+            
+            # Validate it's concise enough
+            if len(insight) < 80 and len(insight.split()) <= 8:
+                return insight
+        except Exception as e:
+            logger.warning(f"Failed to generate insight title: {e}")
+        
+        # Fallback: use original title
+        title = ' '.join(full_title.split())
+        if len(title) > 150:
+            title = title[:147] + "..."
+        return title
+    
+    def _clean_evidence_text(self, evidence: str, title: str) -> str:
+        """
+        Clean evidence text to remove repetitive content
+        
+        Args:
+            evidence: Original evidence text
+            title: Original title to remove if duplicated
+            
+        Returns:
+            Cleaned evidence text
+        """
+        import re
+        
+        # Remove the title if it appears at the end (common pattern)
+        if title and title in evidence:
+            # Remove exact title match
+            evidence = evidence.replace(title, '').strip()
+        
+        # Remove duplicate consecutive sentences
+        sentences = re.split(r'[.!?]\s+', evidence)
+        seen = set()
+        unique_sentences = []
+        for sent in sentences:
+            sent_lower = sent.lower().strip()
+            if sent_lower and sent_lower not in seen and len(sent_lower) > 20:
+                seen.add(sent_lower)
+                unique_sentences.append(sent)
+        
+        cleaned = '. '.join(unique_sentences)
+        if cleaned and not cleaned.endswith('.'):
+            cleaned += '.'
+            
+        return cleaned.strip()
     
     def _summarize_data_source(
         self,
@@ -668,6 +839,7 @@ Respond with ONLY valid JSON, no markdown formatting."""
     ) -> List[Dict[str, Any]]:
         """
         Group supporting signals into primary signals based on themes
+        Iterates through signals one by one to ensure all are assigned
         
         Args:
             company_name: Company name
@@ -679,86 +851,227 @@ Respond with ONLY valid JSON, no markdown formatting."""
         if not supporting_signals:
             return []
         
-        prompt = self._get_primary_signals_prompt(company_name, supporting_signals)
+        logger.info(f"Grouping {len(supporting_signals)} signals iteratively...")
         
-        try:
-            # Increase token limit significantly to handle ~52 signal assignments across ~8 primary signals
-            response = self.ai_service.query(prompt, temperature=0.3, max_tokens=4500)
-            result = json.loads(response)
-            primary_signals = result.get('primary_signals', [])
-            
-            logger.info(f"Created {len(primary_signals)} primary signals from {len(supporting_signals)} supporting signals")
-            
-            # Calculate source distribution for each primary signal
-            for ps in primary_signals:
-                ps['source_distribution'] = self._calculate_source_distribution(
-                    ps.get('supporting_signal_ids', []),
+        # Define primary signal categories upfront
+        primary_signals = {
+            "OPERATIONAL_DEGRADATION": {
+                "id": "ps_1",
+                "title": "OPERATIONAL DEGRADATION",
+                "description": "Evidence of declining operations, store closures, and business sustainability concerns",
+                "risk_level": "high",
+                "supporting_signal_ids": [],
+                "key_indicators": []
+            },
+            "FINANCIAL_DISTRESS": {
+                "id": "ps_2",
+                "title": "FINANCIAL DISTRESS",
+                "description": "Indicators of financial instability, debt, losses, and poor performance",
+                "risk_level": "high",
+                "supporting_signal_ids": [],
+                "key_indicators": []
+            },
+            "WORKFORCE_ISSUES": {
+                "id": "ps_3",
+                "title": "WORKFORCE ISSUES",
+                "description": "Concerns related to employee treatment, layoffs, underpayment, and labor violations",
+                "risk_level": "high",
+                "supporting_signal_ids": [],
+                "key_indicators": []
+            },
+            "REGULATORY_LEGAL": {
+                "id": "ps_4",
+                "title": "REGULATORY/LEGAL RISKS",
+                "description": "Legal challenges, fines, prosecutions, and compliance issues",
+                "risk_level": "high",
+                "supporting_signal_ids": [],
+                "key_indicators": []
+            },
+            "MARKET_PERCEPTION": {
+                "id": "ps_5",
+                "title": "MARKET PERCEPTION",
+                "description": "Public sentiment, reputation concerns, and customer complaints",
+                "risk_level": "medium",
+                "supporting_signal_ids": [],
+                "key_indicators": []
+            },
+            "STRATEGIC_ANOMALIES": {
+                "id": "ps_6",
+                "title": "STRATEGIC ANOMALIES",
+                "description": "Management decisions, ownership changes, and strategic issues",
+                "risk_level": "medium",
+                "supporting_signal_ids": [],
+                "key_indicators": []
+            },
+            "INDUSTRY_CHALLENGES": {
+                "id": "ps_7",
+                "title": "INDUSTRY CHALLENGES",
+                "description": "Market saturation, competitive pressure, and consumer trend shifts",
+                "risk_level": "medium",
+                "supporting_signal_ids": [],
+                "key_indicators": []
+            },
+            "PRODUCT_SERVICE_ISSUES": {
+                "id": "ps_8",
+                "title": "PRODUCT/SERVICE ISSUES",
+                "description": "Quality decline, product defects, and service failures",
+                "risk_level": "medium",
+                "supporting_signal_ids": [],
+                "key_indicators": []
+            }
+        }
+        
+        # Iterate through each signal and assign to appropriate category
+        for idx, signal in enumerate(supporting_signals):
+            try:
+                category = self._classify_single_signal(company_name, signal, list(primary_signals.keys()))
+                
+                if category in primary_signals:
+                    primary_signals[category]['supporting_signal_ids'].append(signal['id'])
+                    logger.info(f"[{idx+1}/{len(supporting_signals)}] {signal['id']} → {category}")
+                else:
+                    # Fallback to a default category if AI returns invalid category
+                    logger.warning(f"Invalid category '{category}' for {signal['id']}, using MARKET_PERCEPTION")
+                    primary_signals['MARKET_PERCEPTION']['supporting_signal_ids'].append(signal['id'])
+                    
+            except Exception as e:
+                logger.error(f"Error classifying {signal['id']}: {e}, assigning to MARKET_PERCEPTION")
+                primary_signals['MARKET_PERCEPTION']['supporting_signal_ids'].append(signal['id'])
+        
+        # Filter out empty primary signals and calculate distributions
+        result = []
+        for ps_data in primary_signals.values():
+            if ps_data['supporting_signal_ids']:
+                ps_data['source_distribution'] = self._calculate_source_distribution(
+                    ps_data['supporting_signal_ids'],
                     supporting_signals
                 )
+                result.append(ps_data)
+        
+        logger.info(f"✓ Created {len(result)} primary signals covering all {len(supporting_signals)} supporting signals")
+        return result
+    
+    def _classify_single_signal(
+        self,
+        company_name: str,
+        signal: Dict[str, Any],
+        available_categories: List[str]
+    ) -> str:
+        """
+        Classify a single signal into one primary category
+        
+        Args:
+            company_name: Company name
+            signal: Single supporting signal
+            available_categories: List of available category keys
             
-            return primary_signals
+        Returns:
+            Category key (e.g., "WORKFORCE_ISSUES")
+        """
+        prompt = f"""Classify this risk signal for "{company_name}" into ONE category.
+
+SIGNAL:
+- ID: {signal['id']}
+- Title: {signal['title']}
+- Source: {signal['source_type']}
+- Severity: {signal.get('severity', 'medium')}
+
+AVAILABLE CATEGORIES:
+1. OPERATIONAL_DEGRADATION - Store/business closures, operational decline
+2. FINANCIAL_DISTRESS - Losses, debt, poor financial performance
+3. WORKFORCE_ISSUES - Layoffs, underpayment, labor violations, employee concerns
+4. REGULATORY_LEGAL - Legal cases, fines, compliance issues, prosecutions
+5. MARKET_PERCEPTION - Reputation damage, customer complaints, public sentiment
+6. STRATEGIC_ANOMALIES - Management changes, ownership changes, questionable decisions
+7. INDUSTRY_CHALLENGES - Market saturation, competitive pressure, consumer trends
+8. PRODUCT_SERVICE_ISSUES - Quality decline, product defects, service failures
+
+Return ONLY the category key (e.g., "WORKFORCE_ISSUES"), nothing else."""
+        
+        try:
+            response = self.ai_service.query(prompt, temperature=0.1, max_tokens=50)
+            category = response.strip()
+            
+            # Handle JSON responses
+            if category.startswith('{'):
+                try:
+                    parsed = json.loads(category)
+                    category = parsed.get('category', category)
+                except json.JSONDecodeError:
+                    pass
+            
+            # Clean up quotes and whitespace
+            category = category.strip('"\'` \n\r\t')
+            
+            # Validate response
+            if category not in available_categories:
+                logger.warning(f"AI returned invalid category '{category}', defaulting to MARKET_PERCEPTION")
+                return "MARKET_PERCEPTION"
+            
+            return category
         except Exception as e:
-            logger.error(f"Error grouping primary signals: {e}")
-            return self._create_fallback_primary_signals(supporting_signals)
+            logger.error(f"Error classifying signal {signal['id']}: {e}")
+            return "MARKET_PERCEPTION"
     
     def _get_primary_signals_prompt(
         self,
         company_name: str,
         supporting_signals: List[Dict[str, Any]]
     ) -> str:
-        # Might need to be open ended
         """Generate prompt for grouping into primary signals"""
-        signals_json = json.dumps(supporting_signals, indent=2)
+        # Extract just the essential info for the prompt to reduce token usage
+        signal_summaries = []
+        for s in supporting_signals:
+            signal_summaries.append({
+                "id": s['id'],
+                "title": s['title'],
+                "source_type": s['source_type'],
+                "severity": s.get('severity', 'medium')
+            })
+        
+        signals_json = json.dumps(signal_summaries, indent=2)
+        all_signal_ids = [s['id'] for s in supporting_signals]
         
         return f"""You are analyzing risk signals for "{company_name}". Group the following {len(supporting_signals)} supporting signals into broader primary signal categories.
 
 SUPPORTING SIGNALS TO GROUP ({len(supporting_signals)} total):
 {signals_json}
 
-MANDATORY REQUIREMENT - THIS IS CRITICAL:
-YOU MUST ASSIGN EVERY SINGLE ONE OF THE {len(supporting_signals)} SUPPORTING SIGNALS.
-- Count them: there are {len(supporting_signals)} signals with IDs from ss_1 to ss_{len(supporting_signals)}
-- Your response MUST include all {len(supporting_signals)} signal IDs across all primary signals
-- If a signal doesn't fit perfectly, put it in the closest category - DO NOT leave it out
-- You can assign 6-10 signals per primary signal if needed
+CRITICAL RULES - FAILURE TO FOLLOW WILL BREAK THE SYSTEM:
+1. EVERY signal ID from {all_signal_ids[0]} to {all_signal_ids[-1]} MUST be assigned to exactly ONE primary signal
+2. NO signal can be assigned to multiple primary signals (no duplicates)
+3. NO signal can be left unassigned
+4. Count: {len(supporting_signals)} signals in → {len(supporting_signals)} assignments out
+5. Each primary signal should have 4-10 supporting signals
 
-VERIFICATION CHECKLIST (complete before responding):
-Did I include ss_1 through ss_{len(supporting_signals)} in my response?
-Did I count the total IDs to ensure it equals {len(supporting_signals)}?
-Are any signals left unassigned?
+BEFORE RESPONDING:
+✓ Count total IDs in your response = {len(supporting_signals)}?
+✓ Check for duplicate IDs?
+✓ Check every ID from the list above is included?
 
-TASK:
-Group these supporting signals into primary signal categories. Common categories include:
-- OPERATIONAL DEGRADATION (closures, declining business)
-- FINANCIAL DISTRESS (losses, debt, poor performance)  
-- WORKFORCE ISSUES (layoffs, employee concerns, labor violations, underpayment)
-- REGULATORY/LEGAL RISKS (legal cases, fines, compliance issues)
-- MARKET PERCEPTION (reputation, customer concerns)
-- STRATEGIC ANOMALIES (management decisions, strategic issues)
-- INDUSTRY CHALLENGES (market saturation, industry overcrowding, consumer trend shift)
-- PRODUCT & CUSTOMER EROSION (quality decline, product defect, disappointment, customer complaint)
+GROUPING CATEGORIES (choose 4-8 of these):
+- OPERATIONAL DEGRADATION: Store/business closures, operational decline
+- FINANCIAL DISTRESS: Losses, debt, poor financial performance  
+- WORKFORCE ISSUES: Layoffs, underpayment, labor violations, employee concerns
+- REGULATORY/LEGAL RISKS: Legal cases, fines, compliance issues, prosecutions
+- MARKET PERCEPTION: Reputation damage, customer complaints, public sentiment
+- STRATEGIC ANOMALIES: Management changes, questionable decisions
+- INDUSTRY CHALLENGES: Market saturation, competitive pressure, consumer trends
+- PRODUCT/SERVICE ISSUES: Quality decline, product defects, service failures
 
-Return a JSON object with this structure:
+Return ONLY valid JSON (no markdown):
 {{
     "primary_signals": [
         {{
             "id": "ps_1",
             "title": "WORKFORCE ISSUES",
-            "description": "Concerns related to employee treatment, layoffs, and labor violations",
+            "description": "Concerns related to employee treatment and labor violations",
             "risk_level": "high",
-            "supporting_signal_ids": ["ss_1", "ss_2", "ss_7", "ss_9", "ss_11", "ss_18"],
-            "key_indicators": ["Underpayment", "Labor violations", "Union activity"]
-        }},
-            "description": "Evidence of declining operations and business closures",
-            "risk_level": "high",
-            "supporting_signal_ids": ["ss_1", "ss_2"],
-            "key_indicators": ["Store closures", "Business sustainability concerns"]
+            "supporting_signal_ids": ["ss_3", "ss_14", "ss_15", "ss_17", "ss_36", "ss_37"],
+            "key_indicators": ["Underpayment", "Labor violations"]
         }}
     ]
-}}
-
-Each primary signal should group 1-5 related supporting signals.
-Respond with ONLY valid JSON, no markdown formatting."""
+}}"""
     
     def _calculate_source_distribution(
         self,

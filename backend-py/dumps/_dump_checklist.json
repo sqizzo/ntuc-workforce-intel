@@ -97,8 +97,36 @@
       },
       "size_bytes": 241411,
       "record_count": 17
+    },
+    {
+      "id": 8,
+      "filename": "company_20260206_135212.json",
+      "filepath": "dumps\\company_20260206_135212.json",
+      "timestamp": "2026-02-06T13:52:12.375240",
+      "dump_type": "company",
+      "metadata": {
+        "mode": "COMPANY",
+        "manual_dump": true,
+        "company_name": "Lazada"
+      },
+      "size_bytes": 210230,
+      "record_count": 12
+    },
+    {
+      "id": 9,
+      "filename": "company_20260206_135914.json",
+      "filepath": "dumps\\company_20260206_135914.json",
+      "timestamp": "2026-02-06T13:59:14.748597",
+      "dump_type": "company",
+      "metadata": {
+        "mode": "COMPANY",
+        "manual_dump": true,
+        "company_name": "Lazada"
+      },
+      "size_bytes": 206943,
+      "record_count": 10
     }
   ],
-  "total_dumps": 7,
-  "last_dump": "2026-02-03T16:05:59.453319"
+  "total_dumps": 9,
+  "last_dump": "2026-02-06T13:59:14.748597"
 }

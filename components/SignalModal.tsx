@@ -79,23 +79,26 @@ export default function SignalModal({
                 <span className="font-medium text-gray-700">Published:</span>{" "}
                 <span
                   className={
-                    signal.metadata?.publish_date
+                    signal.metadata?.publish_date ||
+                    (signal as any).published_date ||
+                    signal.metadata?.published_date
                       ? "text-blue-600 font-semibold"
                       : "text-gray-400 italic"
                   }
                 >
                   <i className="fas fa-calendar-day mr-1"></i>
-                  {signal.metadata?.publish_date
-                    ? new Date(signal.metadata.publish_date).toLocaleDateString(
-                        "en-US",
-                        {
-                          year: "numeric",
-                          month: "long",
-                          day: "numeric",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        },
-                      )
+                  {signal.metadata?.publish_date ||
+                  (signal as any).published_date ||
+                  signal.metadata?.published_date
+                    ? new Date(
+                        signal.metadata?.publish_date ||
+                          (signal as any).published_date ||
+                          signal.metadata?.published_date,
+                      ).toLocaleDateString("en-US", {
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
+                      })
                     : "Unknown"}
                 </span>
               </div>

@@ -5,6 +5,7 @@ More reliable than parsing the JavaScript-heavy web interface
 import feedparser
 import re
 import time
+import uuid
 from datetime import datetime
 from typing import List, Dict, Any, Optional
 from urllib.parse import quote_plus
@@ -164,7 +165,31 @@ class GoogleNewsRSSScraper:
         Returns:
             List of workforce signals
         """
+        # First try: scrape without year in query
         articles = self.scrape_google_news(query, region, language)
+        
+        # If no articles found AND before_date is provided, retry with year in query
+        if len(articles) == 0 and before_date:
+            try:
+                # Extract year from before_date (format: YYYY-MM-DD or ISO format)
+                year = None
+                if before_date:
+                    # Try to parse the date and extract year
+                    if '-' in before_date:
+                        year = before_date.split('-')[0]  # Get YYYY from YYYY-MM-DD
+                    elif len(before_date) >= 4:
+                        year = before_date[:4]  # Get first 4 characters as year
+                
+                if year and year.isdigit():
+                    print(f"⚠️ No results found. Retrying with year {year} in query...")
+                    query_with_year = f"{query} {year}"
+                    articles = self.scrape_google_news(query_with_year, region, language)
+                    
+                    if len(articles) > 0:
+                        print(f"✓ Found {len(articles)} articles using year-enhanced query")
+            except Exception as e:
+                print(f"Failed to retry with year in query: {e}")
+                # Continue with empty articles list
         
         signals = []
         for article in articles:
@@ -179,13 +204,27 @@ class GoogleNewsRSSScraper:
                     pass
             
             # Convert to workforce signal format
+            description = article.get('description', '') or ''
+            headline = article.get('headline', '') or ''
+
+            combined_text = ''
+            if description:
+                desc_norm = description.strip()
+                head_norm = headline.strip()
+                if head_norm and head_norm.lower() in desc_norm.lower():
+                    combined_text = desc_norm
+                else:
+                    combined_text = f"{headline}. {desc_norm}" if headline else desc_norm
+            else:
+                combined_text = headline
+
             signal = {
-                'id': f"gnews_rss_{hash(article['headline'] + article['source_link'])}",
+                'id': f"gnews_rss_{uuid.uuid4().hex[:16]}",
                 'source_type': 'google_news',
                 'source_name': article['source_name'],
                 'source_url': article['source_link'],
                 'ingestion_timestamp': article['extracted_timestamp'],
-                'extracted_text': f"{article['headline']}. {article['description']}" if article['description'] else article['headline'],
+                'extracted_text': combined_text,
                 'headline': article['headline'],
                 'published_date': article['published_date'],
                 'raw_date': article['raw_date'],
@@ -195,10 +234,101 @@ class GoogleNewsRSSScraper:
                     'language': language,
                     'scraper': 'google_news_rss',
                     'description': article['description'],
-                    'title': article['headline']
+                    'title': article['headline'],
+                    'publish_date': article['published_date'],
+                    'published_date': article['published_date']
                 }
             }
             signals.append(signal)
+        
+        # Second fallback: If date filtering resulted in 0 signals, retry with year in query
+        if len(signals) == 0 and len(articles) > 0 and before_date:
+            try:
+                # Extract year from before_date
+                year = None
+                if '-' in before_date:
+                    year = before_date.split('-')[0]
+                elif len(before_date) >= 4:
+                    year = before_date[:4]
+                
+                if year and year.isdigit():
+                    print(f"⚠️ All {len(articles)} articles filtered out by date. Retrying with year {year} in query...")
+                    query_with_year = f"{query} {year}"
+                    articles_retry = self.scrape_google_news(query_with_year, region, language)
+                    
+                    if len(articles_retry) > 0:
+                        print(f"✓ Found {len(articles_retry)} articles using year-enhanced query")
+                        
+                        # Convert retry articles to signals with date filtering
+                        for article in articles_retry:
+                            # Apply date filter if provided
+                            if before_date:
+                                try:
+                                    article_date = datetime.fromisoformat(article['published_date'].replace('Z', '+00:00'))
+                                    filter_date = datetime.fromisoformat(before_date)
+                                    if article_date >= filter_date:
+                                        continue
+                                except:
+                                    pass
+                            
+                            # Convert to workforce signal format
+                            description = article.get('description', '') or ''
+                            headline = article.get('headline', '') or ''
+
+                            combined_text = ''
+                            if description:
+                                desc_norm = description.strip()
+                                head_norm = headline.strip()
+                                if head_norm and head_norm.lower() in desc_norm.lower():
+                                    combined_text = desc_norm
+                                else:
+                                    combined_text = f"{headline}. {desc_norm}" if headline else desc_norm
+                            else:
+                                combined_text = headline
+
+                            signal = {
+                                'id': f"gnews_rss_{uuid.uuid4().hex[:16]}",
+                                'source_type': 'google_news',
+                                'source_name': article['source_name'],
+                                'source_url': article['source_link'],
+                                'ingestion_timestamp': article['extracted_timestamp'],
+                                'extracted_text': combined_text,
+                                'headline': article['headline'],
+                                'published_date': article['published_date'],
+                                'raw_date': article['raw_date'],
+                                'metadata': {
+                                    'search_query': query_with_year,  # Update to show year was used
+                                    'region': region,
+                                    'language': language,
+                                    'scraper': 'google_news_rss',
+                                    'description': article['description'],
+                                    'title': article['headline'],
+                                    'publish_date': article['published_date'],
+                                    'published_date': article['published_date']
+                                }
+                            }
+                            signals.append(signal)
+                        
+                        print(f"✓ After date filtering: {len(signals)} signals from year-enhanced query")
+            except Exception as e:
+                print(f"Failed to retry with year in query after filtering: {e}")
+        
+        # Deduplicate signals based on headline + source_link combination
+        seen = set()
+        unique_signals = []
+        for sig in signals:
+            # Create a unique key from headline and source URL
+            key = (sig['headline'], sig['source_url'])
+            if key not in seen:
+                seen.add(key)
+                # Generate unique ID with UUID to avoid collisions
+                sig['id'] = f"gnews_rss_{uuid.uuid4().hex[:16]}"
+                unique_signals.append(sig)
+        
+        if len(signals) != len(unique_signals):
+            print(f"⚠️ Removed {len(signals) - len(unique_signals)} duplicate articles")
+        
+        signals = unique_signals
         
         # If oldest_only is specified, sort by date and return only oldest N articles
         if oldest_only is not None and oldest_only > 0:
